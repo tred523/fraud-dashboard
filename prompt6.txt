@@ -1,0 +1,1 @@
+Fix Railway deployment. Error is "vite: Permission denied" on Linux. In client/package.json change the build script from "vite build" to "node node_modules/.bin/vite build". Also in root package.json change build script to: "cd client && npm install && node node_modules/.bin/vite build"

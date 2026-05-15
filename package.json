@@ -7,7 +7,7 @@
     "dev:server": "node server/index.js",
     "dev:client": "npm run dev --prefix client",
     "start": "NODE_ENV=production node server/index.js",
-    "build": "cd client && npm install && npx vite build",
+    "build": "cd client && npm install && node node_modules/.bin/vite build",
     "setup": "npm install && npm install --prefix client"
   },
   "dependencies": {
