@@ -1,0 +1,1 @@
+Fix Railway deployment. Error is "sh: 1: vite: Permission denied". Fix the client/package.json build script to use npx vite build instead of just vite build. Also update the root package.json build script to: cd client && npm install && npx vite build
