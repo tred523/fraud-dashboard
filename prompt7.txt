@@ -1,0 +1,1 @@
+Fix the server to use Railway's PORT environment variable. In server/index.js find where the port is defined and change it to: const PORT = process.env.PORT || 3001; Make sure the server listens on this PORT variable.
