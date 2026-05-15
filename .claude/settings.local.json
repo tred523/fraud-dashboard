@@ -5,7 +5,9 @@
       "PowerShell(Get-ChildItem -Path C:\\\\Projects\\\\fraud-dashboard -Recurse -File | Where-Object { $_.DirectoryName -notmatch 'node_modules' -and $_.DirectoryName -notmatch 'dist' } | ForEach-Object { $_.FullName.Replace\\('C:\\\\Projects\\\\fraud-dashboard\\\\', ''\\) } | Sort-Object)",
       "PowerShell(Get-ChildItem -Path \"C:\\\\Projects\\\\fraud-dashboard\" -Depth 2 -Directory | Where-Object {$_.FullName -notmatch \"node_modules\"} | Select-Object FullName)",
       "PowerShell(head *)",
-      "PowerShell(Get-ChildItem -Path \"C:\\\\Projects\\\\fraud-dashboard\" -Directory | Where-Object {$_.Name -ne \"node_modules\"})"
+      "PowerShell(Get-ChildItem -Path \"C:\\\\Projects\\\\fraud-dashboard\" -Directory | Where-Object {$_.Name -ne \"node_modules\"})",
+      "Bash(Get-ChildItem -Path \"C:\\\\Projects\\\\fraud-dashboard\" -Force)",
+      "Bash(Select-Object Name, FullName, PSIsContainer)"
     ]
   }
 }
