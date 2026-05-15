@@ -1,0 +1,7 @@
+Debug and fix the AT RISK metric on Overview page. The metric shows 0% but there are clearly SUSPICIOUS events in the database. 
+
+1. Check the /api/overview endpoint in server/routes/overview.js - find where high_risk_percent is calculated
+2. The calculation should be: (count of events where risk_score >= 41) / total_events * 100
+3. Console.log the values to debug
+4. Fix the calculation so it returns the correct percentage
+5. Also check that the frontend is displaying the value correctly from the API response
