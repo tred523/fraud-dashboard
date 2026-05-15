@@ -1,0 +1,47 @@
+Build a fraud detection dashboard web app for SaaS companies using Fingerprint Pro data.
+
+TECH STACK:
+- React frontend (single page)
+- Node.js/Express backend
+- SQLite database (file-based, no setup needed)
+- File upload for JSON data ingestion
+
+CORE FEATURES:
+
+1. FILE UPLOAD - Accept JSON array or newline-delimited JSON objects. Parse and store all events in SQLite. Fields to extract: event_id, timestamp, visitor_id, visitor_found, first_seen_at, last_seen_at, ip_address, browser_name, os, device, bot, suspect_score, tampering, tampering_ml_score, anti_detect_browser (from tampering_details), anomaly_score (from tampering_details), vpn, proxy, incognito, virtual_machine, virtual_machine_ml_score, city_name, country_code, asn_name, velocity_distinct_ip_24h, velocity_events_24h, font_hash (from raw_device_attributes), webgl_renderer_unmasked (from raw_device_attributes.webgl_basics), hardware_concurrency, device_memory, platform, confidence_score
+
+2. RISK SCORING ENGINE - Calculate composite risk score 0-100 per event:
+- anti_detect_browser=true → +40
+- tampering_ml_score > 0.5 → +25
+- tampering_ml_score 0.2-0.5 → +15
+- virtual_machine=true → +20
+- anomaly_score > 0 → +15
+- vpn=true → +10
+- proxy=true → +10
+- suspect_score > 10 → +10
+- velocity_distinct_ip_24h > 3 → +15
+- visitor_found=false → +5
+Risk levels: 0-20 CLEAN (green), 21-40 LOW (yellow), 41-65 SUSPICIOUS (orange), 66+ HIGH RISK (red)
+
+3. CROSS-VISITOR ANOMALY DETECTION:
+a) IP Sharing: visitor_ids sharing same IP
+b) Font Hash Clustering: same font_hash across many visitors
+c) WebGL Clustering: same webgl_renderer_unmasked across visitors
+d) Rapid IP Change: same visitor_id with 2+ IPs within 10 minutes
+e) VM + MacIntel contradiction: virtual_machine=true AND platform=MacIntel AND renderer contains Apple M
+f) Anti-detect cluster: group anti_detect_browser=true events by font_hash or webgl_renderer
+
+4. DASHBOARD VIEWS:
+
+A) OVERVIEW PAGE - 4 metric cards (Total Events, High Risk %, Suspicious Visitors, Anomalies Found), events table with columns: Timestamp, Visitor ID, City, OS/Device, Risk Score badge, Flags icons (VPN/Proxy/VM/AntiDetect/Tampering/Bot). Filters by risk level, country, flag type. Click row opens Visitor Detail.
+
+B) VISITOR DETAIL PAGE - All events for visitor_id chronologically, device fingerprint summary (OS/Browser/GPU/Screen/Platform/Font Hash/Hardware/Memory), risk timeline chart, related visitors sharing same IP or font_hash or webgl_renderer, all flags with plain English explanation.
+
+C) ANOMALIES PAGE - All detected anomalies grouped by type, each with affected visitor_ids, severity, plain English explanation.
+
+D) CLUSTERS PAGE - Visual grouping by font_hash, webgl_renderer, IP address. Table showing cluster size, shared value, risk levels.
+
+5. UI: Clean minimal professional (like Linear or Stripe). Dark sidebar. Color coding: red HIGH RISK, orange SUSPICIOUS, yellow LOW, green CLEAN. Responsive.
+
+6. SAMPLE DATA - Pre-load these 7 events as demo data so app works immediately:
+[{"event_id":"1778877600322.gGpxg1","timestamp":1778877600335,"visitor_id":"B0gCjclT5Kt70D9wwLoT","suspect_score":0,"tampering":false,"tampering_ml_score":0.0133,"anti_detect_browser":false,"anomaly_score":0,"vpn":false,"proxy":false,"virtual_machine":false,"bot":"not_detected","ip_address":"37.84.27.229","city_name":"Hannover","country_code":"DE","os":"Android","browser_name":"Chrome Mobile","font_hash":"d751713988987e9331980363e24189ce","webgl_renderer_unmasked":"Adreno (TM) 750","hardware_concurrency":8,"device_memory":8,"platform":"Linux armv81","visitor_found":true,"velocity_distinct_ip_24h":4},{"event_id":"1778877666336.jfhFGj","timestamp":1778877666350,"visitor_id":"aQw8UdQ9WL0eE6C0kOXr","suspect_score":0,"tampering":false,"tampering_ml_score":0.003,"anti_detect_browser":false,"anomaly_score":0,"vpn":false,"proxy":false,"virtual_machine":false,"bot":"not_detected","ip_address":"176.0.211.207","city_name":"Berlin","country_code":"DE","os":"Android","browser_name":"Chrome Mobile","font_hash":"d751713988987e9331980363e24189ce","webgl_renderer_unmasked":"Adreno (TM) 710","hardware_concurrency":8,"device_memory":4,"platform":"Linux armv81","visitor_found":true,"velocity_distinct_ip_24h":1},{"event_id":"1778877719158.pQ7Epz","timestamp":1778877719169,"visitor_id":"P0olT9ooM2qltqlotSEV","suspect_score":8,"tampering":true,"tampering_ml_score":0.865,"anti_detect_browser":true,"anomaly_score":0,"vpn":false,"proxy":false,"virtual_machine":false,"bot":"not_detected","ip_address":"176.3.220.156","city_name":"Stuttgart","country_code":"DE","os":"Windows","browser_name":"Chrome","font_hash":"1e5ed09f268d3babd811d205e6582c91","webgl_renderer_unmasked":"ANGLE (NVIDIA, NVIDIA GeForce RTX 4070 SUPER (0x00002783) Direct3D11 vs_5_0 ps_5_0, D3D11)","hardware_concurrency":20,"device_memory":32,"platform":"Win32","visitor_found":true,"velocity_distinct_ip_24h":1},{"event_id":"1778877764741.ZUw1JH","timestamp":1778877764753,"visitor_id":"3NcqkuFKy9k7spPP0EW9","suspect_score":22,"tampering":true,"tampering_ml_score":0.2156,"anti_detect_browser":false,"anomaly_score":1,"vpn":false,"proxy":false,"virtual_machine":true,"bot":"not_detected","ip_address":"176.103.228.19","city_name":"Frankfurt am Main","country_code":"DE","os":"Mac OS X","browser_name":"Chrome","font_hash":"bbbea47743cf8367b580a2097e639557","webgl_renderer_unmasked":"ANGLE (Apple, ANGLE Metal Renderer: Apple M3 Pro, Unspecified Version)","hardware_concurrency":20,"device_memory":32,"platform":"MacIntel","visitor_found":false,"velocity_distinct_ip_24h":1},{"event_id":"1778877796887.9uzzer","timestamp":1778877796896,"visitor_id":"hC3zBmBTw08JSdez0Xto","suspect_score":0,"tampering":false,"tampering_ml_score":0.1559,"anti_detect_browser":false,"anomaly_score":0,"vpn":false,"proxy":false,"virtual_machine":false,"bot":"not_detected","ip_address":"176.0.82.172","city_name":"Berlin","country_code":"DE","os":"Windows","browser_name":"Chrome","font_hash":"50a1ee1ae0a63656844e7e05dd1c6f17","webgl_renderer_unmasked":"ANGLE (NVIDIA, NVIDIA GeForce RTX 4070 SUPER (0x00002783) Direct3D11 vs_5_0 ps_5_0, D3D11)","hardware_concurrency":20,"device_memory":32,"platform":"Win32","visitor_found":true,"velocity_distinct_ip_24h":1},{"event_id":"1778877838199.dlRjxp","timestamp":1778877838209,"visitor_id":"LWrtj8049U0NHAfoVnuv","suspect_score":22,"tampering":true,"tampering_ml_score":0.4346,"anti_detect_browser":false,"anomaly_score":1,"vpn":false,"proxy":false,"virtual_machine":true,"bot":"not_detected","ip_address":"176.103.228.19","city_name":"Frankfurt am Main","country_code":"DE","os":"Mac OS X","browser_name":"Chrome","font_hash":"bbbea47743cf8367b580a2097e639557","webgl_renderer_unmasked":"ANGLE (Apple, ANGLE Metal Renderer: Apple M4 Pro, Unspecified Version)","hardware_concurrency":24,"device_memory":32,"platform":"MacIntel","visitor_found":true,"velocity_distinct_ip_24h":1},{"event_id":"1778877863697.9NbD1v","timestamp":1778877863704,"visitor_id":"3NcqkuFKy9k7spPP0EW9","suspect_score":22,"tampering":true,"tampering_ml_score":0.1909,"anti_detect_browser":false,"anomaly_score":1,"vpn":false,"proxy":false,"virtual_machine":true,"bot":"not_detected","ip_address":"176.2.198.118","city_name":"Munich","country_code":"DE","os":"Mac OS X","browser_name":"Chrome","font_hash":"bbbea47743cf8367b580a2097e639557","webgl_renderer_unmasked":"ANGLE (Apple, ANGLE Metal Renderer: Apple M3 Pro, Unspecified Version)","hardware_concurrency":20,"device_memory":32,"platform":"MacIntel","visitor_found":true,"velocity_distinct_ip_24h":2}]

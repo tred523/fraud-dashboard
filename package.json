@@ -1,0 +1,22 @@
+{
+  "name": "fraud-dashboard",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently \"node server/index.js\" \"cd client && node \\\"C:/Program Files/nodejs/node_modules/npm/bin/npx-cli.js\\\" vite\"",
+    "dev:server": "node server/index.js",
+    "dev:client": "node \"C:/Program Files/nodejs/node_modules/npm/bin/npx-cli.js\" --prefix client vite",
+    "start": "node server/index.js",
+    "build": "node \"C:/Program Files/nodejs/node_modules/npm/bin/npx-cli.js\" --prefix client run build",
+    "setup": "node \"C:/Program Files/nodejs/node_modules/npm/bin/npx-cli.js\" install && node \"C:/Program Files/nodejs/node_modules/npm/bin/npx-cli.js\" install --prefix client"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.18.3",
+    "multer": "^1.4.5-lts.1"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "nodemon": "^3.1.0"
+  }
+}

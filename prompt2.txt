@@ -1,0 +1,20 @@
+Add Fingerprint Pro webhook integration to the fraud dashboard.
+
+1. Create a new endpoint POST /api/webhook/fingerprint that:
+   - Accepts Fingerprint Pro webhook payload
+   - Validates the webhook signature using FPJS_SECRET_KEY environment variable
+   - Parses the event and extracts all fields we already store in the database
+   - Calculates risk score using existing scoring engine
+   - Saves to SQLite database
+   - Returns 200 OK
+
+2. Create .env.example file with:
+   FPJS_SECRET_KEY=your_secret_key_here
+   PORT=3001
+
+3. Add webhook setup instructions to README.md:
+   - How to get the webhook secret from Fingerprint Pro dashboard
+   - What URL to enter in Fingerprint Pro (http://yourserver.com/api/webhook/fingerprint)
+   - How to test with a sample payload
+
+4. Add a "Live" indicator to the Overview page header that shows green dot when last event was received less than 5 minutes ago, gray dot otherwise.
