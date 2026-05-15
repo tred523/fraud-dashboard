@@ -1,0 +1,19 @@
+Add an interactive account relationship graph to the fraud dashboard.
+
+1. Install react-force-graph or d3-force library in the client
+
+2. Create a new page "Graph" (add to sidebar navigation between Anomalies and Clusters)
+
+3. The graph should show:
+- Each unique visitor_id as a node (circle)
+- Color nodes by risk level: red=HIGH RISK, orange=SUSPICIOUS, yellow=LOW, green=CLEAN
+- Draw edges (lines) between nodes that share: same IP address, same font_hash, same webgl_renderer_unmasked
+- Label each edge with the connection type (IP, Font, GPU)
+- Node size based on number of events (more events = bigger node)
+- Clicking a node opens the Visitor Detail page
+
+4. Add a legend showing: node colors by risk, edge types (IP/Font/GPU)
+
+5. Add filter controls: show/hide connections by type (IP only, Font only, GPU only, All)
+
+6. The graph should be interactive: drag nodes, zoom in/out, pan

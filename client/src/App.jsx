@@ -4,6 +4,7 @@ import Overview from './pages/Overview';
 import VisitorDetail from './pages/VisitorDetail';
 import Anomalies from './pages/Anomalies';
 import Clusters from './pages/Clusters';
+import Graph from './pages/Graph';
 
 export default function App() {
   return (
@@ -15,6 +16,7 @@ export default function App() {
             <Route path="/"               element={<Overview />} />
             <Route path="/visitor/:id"    element={<VisitorDetail />} />
             <Route path="/anomalies"      element={<Anomalies />} />
+            <Route path="/graph"          element={<Graph />} />
             <Route path="/clusters"       element={<Clusters />} />
             <Route path="*"               element={<Navigate to="/" replace />} />
           </Routes>

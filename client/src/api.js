@@ -9,6 +9,7 @@ async function get(path) {
 export const fetchOverview  = ()           => get('/overview');
 export const fetchAnomalies = ()           => get('/anomalies');
 export const fetchClusters  = ()           => get('/clusters');
+export const fetchGraph     = ()           => get('/graph');
 export const fetchCountries = ()           => get('/events/countries');
 export const fetchVisitor   = (id)         => get(`/visitor/${encodeURIComponent(id)}`);
 
