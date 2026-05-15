@@ -8,7 +8,7 @@ router.get('/', (_req, res) => {
   const db = getDb();
 
   const total     = db.prepare('SELECT COUNT(*) as c FROM events').get().c;
-  const highRisk  = db.prepare("SELECT COUNT(*) as c FROM events WHERE risk_level = 'HIGH RISK'").get().c;
+  const highRisk  = db.prepare("SELECT COUNT(*) as c FROM events WHERE risk_level IN ('HIGH RISK','SUSPICIOUS')").get().c;
   const suspicious = db.prepare("SELECT COUNT(DISTINCT visitor_id) as c FROM events WHERE risk_level IN ('HIGH RISK','SUSPICIOUS')").get().c;
   const anomalies = detectAnomalies(db);
 

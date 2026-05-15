@@ -1,0 +1,6 @@
+Fix the HIGH RISK metric on Overview page. Currently it shows 0% even when there are SUSPICIOUS events. Fix the logic:
+1. HIGH RISK = events with risk_score >= 66
+2. SUSPICIOUS = events with risk_score 41-65
+3. The HIGH RISK % metric should show percentage of events with risk_score >= 41 (both SUSPICIOUS and HIGH RISK combined), not just >= 66
+4. Rename the metric label from "HIGH RISK" to "AT RISK" to be more accurate
+5. Also fix the metric color - should be red if > 0%, gray if 0%

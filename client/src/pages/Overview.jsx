@@ -72,8 +72,8 @@ export default function Overview() {
           <div className="metric-sub">all ingested events</div>
         </div>
         <div className="metric-card">
-          <div className="metric-label">High Risk</div>
-          <div className="metric-value metric-accent-red">{overview ? `${overview.high_risk_percent}%` : '—'}</div>
+          <div className="metric-label">At Risk</div>
+          <div className={`metric-value ${overview?.high_risk_percent > 0 ? 'metric-accent-red' : ''}`}>{overview ? `${overview.high_risk_percent}%` : '—'}</div>
           <div className="metric-sub">of all events</div>
         </div>
         <div className="metric-card">
