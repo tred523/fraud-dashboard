@@ -3,6 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import { fetchAccounts } from '../api';
 import VerdictBadge from '../components/VerdictBadge';
 
+const fmt = (ts) => {
+  if (!ts) return '—';
+  const n = Number(ts);
+  if (isNaN(n)) return ts;
+  const d = new Date(n > 9999999999 ? n : n * 1000);
+  return isNaN(d.getTime()) ? String(ts) : d.toLocaleString('en-GB');
+};
+
 const EVENT_TYPE_COLORS = {
   login:           { bg: '#60a5fa22', color: '#60a5fa', border: '#60a5fa44' },
   signup:          { bg: '#34d39922', color: '#34d399', border: '#34d39944' },
