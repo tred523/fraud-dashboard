@@ -12,6 +12,7 @@ export const fetchClusters  = ()           => get('/clusters');
 export const fetchGraph     = ()           => get('/graph');
 export const fetchCountries = ()           => get('/events/countries');
 export const fetchVisitor   = (id)         => get(`/visitor/${encodeURIComponent(id)}`);
+export const fetchBehavior  = (visitorId)  => get(`/visitor/${encodeURIComponent(visitorId)}`).then(d => d.behavior || []);
 
 export function fetchEvents(filters = {}) {
   const p = new URLSearchParams();

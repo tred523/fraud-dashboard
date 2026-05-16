@@ -40,7 +40,11 @@ router.get('/:visitorId', (req, res) => {
       ).all(...ips)
     : [];
 
-  res.json({ events, related: { by_ip: byIp, by_font: byFont, by_webgl: byWebgl }, account_timeline: accountTimeline });
+  const behavior = db.prepare(
+    'SELECT * FROM behavior_events WHERE visitor_id = ? ORDER BY collected_at DESC LIMIT 20'
+  ).all(visitorId);
+
+  res.json({ events, related: { by_ip: byIp, by_font: byFont, by_webgl: byWebgl }, account_timeline: accountTimeline, behavior });
 });
 
 module.exports = router;

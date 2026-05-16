@@ -91,6 +91,11 @@ export default function Overview() {
           <div className="metric-value metric-accent-orange">{overview?.total_account_events ?? '—'}</div>
           <div className="metric-sub">ingested via API</div>
         </div>
+        <div className="metric-card">
+          <div className="metric-label">Bot Activity</div>
+          <div className={`metric-value ${(overview?.bot_sessions ?? 0) > 0 ? 'metric-accent-red' : ''}`}>{overview?.bot_sessions ?? '—'}</div>
+          <div className="metric-sub">high-probability bot sessions</div>
+        </div>
       </div>
 
       {/* Filters */}

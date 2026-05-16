@@ -1,0 +1,29 @@
+Add behavioral biometrics tracking to the fraud dashboard.
+
+1. Create a JavaScript tracking script at /public/tracker.js that clients embed on their site:
+- Track mouse movement patterns (speed, acceleration, path smoothness)
+- Track click patterns (position, timing between clicks)
+- Track keyboard patterns (typing speed, key intervals, backspace frequency)
+- Track scroll behavior (speed, direction changes)
+- Track time spent on each page/section
+- Track form interaction (how long to fill each field)
+- Calculate bot score: 0-100 based on these signals (bots move in straight lines, click instantly, type at perfect intervals)
+- Send data every 30 seconds or on page unload to POST /api/behavior
+
+2. Create POST /api/behavior endpoint that:
+- Accepts behavioral data with account_id and api_key
+- Stores in new SQLite table: behavior_events
+- Calculates and stores: mouse_smoothness_score, typing_rhythm_score, bot_probability (0-100)
+
+3. Add "Behavior" tab to Visitor Detail page showing:
+- Bot probability gauge (0-100)
+- Mouse movement pattern description (Human-like / Robotic / Suspicious)
+- Typing rhythm (Natural / Automated / Suspicious)
+- Session timeline with time spent on each page
+
+4. Add behavior signals to the risk scoring engine:
+- bot_probability > 80 → +35 points
+- bot_probability 50-80 → +20 points
+- bot_probability > 30 → +10 points
+
+5. Update Overview page to show "Bot Activity" metric card

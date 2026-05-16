@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts';
@@ -35,12 +35,160 @@ function FpItem({ label, value }) {
   );
 }
 
+function BotGauge({ value }) {
+  const r = 60;
+  const circ = Math.PI * r;
+  const offset = circ * (1 - Math.min(100, Math.max(0, value)) / 100);
+  const color = value > 80 ? '#ef4444' : value > 50 ? '#f97316' : value > 30 ? '#eab308' : '#22c55e';
+  return (
+    <svg width="160" height="95" viewBox="0 0 160 95">
+      <path d="M 20 80 A 60 60 0 0 1 140 80" fill="none" stroke="#1e2130" strokeWidth="12" strokeLinecap="round" />
+      <path d="M 20 80 A 60 60 0 0 1 140 80" fill="none" stroke={color} strokeWidth="12" strokeLinecap="round"
+        strokeDasharray={circ} strokeDashoffset={offset} style={{ transition: 'stroke-dashoffset 0.5s' }} />
+      <text x="80" y="72" textAnchor="middle" fill={color} fontSize="26" fontWeight="bold" fontFamily="monospace">{value}</text>
+      <text x="80" y="88" textAnchor="middle" fill="#64748b" fontSize="9" letterSpacing="1">BOT PROBABILITY</text>
+    </svg>
+  );
+}
+
+function mouseLabel(score) {
+  if (score > 80) return { label: 'Robotic', color: '#ef4444' };
+  if (score > 55) return { label: 'Suspicious', color: '#f97316' };
+  return { label: 'Human-like', color: '#22c55e' };
+}
+
+function typingLabel(score) {
+  if (score > 80) return { label: 'Automated', color: '#ef4444' };
+  if (score > 55) return { label: 'Suspicious', color: '#f97316' };
+  return { label: 'Natural', color: '#22c55e' };
+}
+
+function BehaviorTab({ behavior }) {
+  if (!behavior || behavior.length === 0) {
+    return (
+      <div className="card" style={{ padding: 24 }}>
+        <div className="empty-state">
+          <div className="empty-icon" style={{ fontSize: 32 }}>📡</div>
+          <div className="empty-text">No behavioral data collected yet.</div>
+          <div style={{ fontSize: 12, color: 'var(--text3)', marginTop: 8, maxWidth: 340, textAlign: 'center' }}>
+            Embed <code style={{ background: 'var(--sidebar)', padding: '1px 5px', borderRadius: 3 }}>/tracker.js</code> on
+            your site and configure <code style={{ background: 'var(--sidebar)', padding: '1px 5px', borderRadius: 3 }}>window.FraudTrackerConfig</code> with
+            the visitor_id and api_key to start collecting signals.
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const latest = behavior[0];
+  const bp = Math.round(latest.bot_probability ?? 0);
+  const mouse = mouseLabel(latest.mouse_smoothness_score ?? 50);
+  const typing = typingLabel(latest.typing_rhythm_score ?? 50);
+
+  let timeline = [];
+  try { timeline = latest.page_timeline ? JSON.parse(latest.page_timeline) : []; } catch (_) {}
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      <div className="card">
+        <div className="card-header"><span className="card-title">Bot Analysis</span></div>
+        <div style={{ padding: 20, display: 'flex', flexWrap: 'wrap', gap: 32, alignItems: 'center' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <BotGauge value={bp} />
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <div>
+              <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 4 }}>MOUSE MOVEMENT PATTERN</div>
+              <span style={{ fontSize: 14, fontWeight: 600, color: mouse.color }}>{mouse.label}</span>
+              <span style={{ fontSize: 11, color: 'var(--text3)', marginLeft: 8 }}>smoothness: {Math.round(latest.mouse_smoothness_score ?? 50)}/100</span>
+            </div>
+            <div>
+              <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 4 }}>TYPING RHYTHM</div>
+              <span style={{ fontSize: 14, fontWeight: 600, color: typing.color }}>{typing.label}</span>
+              <span style={{ fontSize: 11, color: 'var(--text3)', marginLeft: 8 }}>rhythm score: {Math.round(latest.typing_rhythm_score ?? 50)}/100</span>
+            </div>
+            <div style={{ display: 'flex', gap: 20, fontSize: 12, color: 'var(--text2)' }}>
+              <span>Mouse moves: <b>{latest.mouse_move_count}</b></span>
+              <span>Clicks: <b>{latest.click_count}</b></span>
+              <span>Keystrokes: <b>{latest.keyboard_event_count}</b></span>
+              <span>Backspaces: <b>{latest.backspace_count}</b></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {timeline.length > 0 && (
+        <div className="card">
+          <div className="card-header">
+            <span className="card-title">Session Timeline</span>
+            <span style={{ fontSize: 12, color: 'var(--text3)' }}>{timeline.length} page{timeline.length !== 1 ? 's' : ''}</span>
+          </div>
+          <div style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {timeline.map((p, i) => {
+              const duration = p.end && p.start ? Math.round((p.end - p.start) / 1000) : null;
+              return (
+                <div key={i} style={{
+                  display: 'flex', alignItems: 'center', gap: 12, padding: '8px 10px',
+                  background: 'var(--sidebar)', borderRadius: 6, border: '1px solid var(--border)',
+                }}>
+                  <span style={{ fontSize: 11, color: 'var(--text3)', width: 20, textAlign: 'right' }}>{i + 1}</span>
+                  <span className="mono" style={{ fontSize: 12, color: 'var(--text2)', flex: 1 }}>{p.path}</span>
+                  {duration != null && (
+                    <span style={{ fontSize: 11, color: 'var(--text3)', whiteSpace: 'nowrap' }}>{duration}s</span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {behavior.length > 1 && (
+        <div className="card">
+          <div className="card-header">
+            <span className="card-title">Behavior History</span>
+            <span style={{ fontSize: 12, color: 'var(--text3)' }}>{behavior.length} sessions</span>
+          </div>
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Collected</th>
+                  <th>Bot Prob.</th>
+                  <th>Mouse</th>
+                  <th>Typing</th>
+                  <th>Session</th>
+                </tr>
+              </thead>
+              <tbody>
+                {behavior.map(b => {
+                  const bpVal = Math.round(b.bot_probability ?? 0);
+                  const bpColor = bpVal > 80 ? '#ef4444' : bpVal > 50 ? '#f97316' : bpVal > 30 ? '#eab308' : '#22c55e';
+                  return (
+                    <tr key={b.id}>
+                      <td style={{ fontSize: 12, color: 'var(--text3)' }}>{fmt(b.collected_at)}</td>
+                      <td><span style={{ color: bpColor, fontWeight: 600 }}>{bpVal}</span></td>
+                      <td style={{ fontSize: 12 }}>{mouseLabel(b.mouse_smoothness_score ?? 50).label}</td>
+                      <td style={{ fontSize: 12 }}>{typingLabel(b.typing_rhythm_score ?? 50).label}</td>
+                      <td style={{ fontSize: 12, color: 'var(--text3)' }}>{b.session_duration ? `${Math.round(b.session_duration / 1000)}s` : '—'}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function VisitorDetail() {
   const { id } = useParams();
-  const navigate = useNavigate();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [activeTab, setActiveTab] = useState('overview');
 
   useEffect(() => {
     setLoading(true);
@@ -55,7 +203,7 @@ export default function VisitorDetail() {
   if (error)   return <div className="page"><div className="empty-state"><div className="empty-icon">⚠️</div><div className="empty-text">{error}</div></div></div>;
   if (!data)   return null;
 
-  const { events, related, account_timeline } = data;
+  const { events, related, account_timeline, behavior } = data;
   const latest = events[events.length - 1];
   const maxRiskLevel = events.reduce((m, e) => {
     const order = { CLEAN: 0, LOW: 1, SUSPICIOUS: 2, 'HIGH RISK': 3 };
@@ -97,7 +245,30 @@ export default function VisitorDetail() {
         </div>
       </div>
 
-      <div className="detail-grid">
+      {/* Tabs */}
+      <div style={{ display: 'flex', gap: 4, marginBottom: 20, borderBottom: '1px solid var(--border)', paddingBottom: 0 }}>
+        {['overview', 'behavior'].map(tab => (
+          <button key={tab} onClick={() => setActiveTab(tab)} style={{
+            padding: '8px 16px', background: 'none', border: 'none', cursor: 'pointer',
+            fontSize: 13, fontWeight: 500, color: activeTab === tab ? 'var(--blue)' : 'var(--text3)',
+            borderBottom: activeTab === tab ? '2px solid var(--blue)' : '2px solid transparent',
+            marginBottom: -1, textTransform: 'capitalize',
+          }}>
+            {tab}{tab === 'behavior' && behavior?.length > 0 && (
+              <span style={{
+                marginLeft: 6, fontSize: 10, background: 'var(--blue)', color: '#fff',
+                borderRadius: 8, padding: '1px 5px', fontWeight: 700,
+              }}>{behavior.length}</span>
+            )}
+          </button>
+        ))}
+      </div>
+
+      {activeTab === 'behavior' ? (
+        <BehaviorTab behavior={behavior} />
+      ) : null}
+
+      {activeTab === 'overview' && <div className="detail-grid">
         {/* Left column */}
         <div>
           {/* Risk Timeline */}
@@ -267,7 +438,7 @@ export default function VisitorDetail() {
             </div>
           )}
         </div>
-      </div>
+      </div>}
     </div>
   );
 }

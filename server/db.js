@@ -50,7 +50,31 @@ function initDb() {
       platform TEXT,
       confidence_score REAL,
       risk_score INTEGER DEFAULT 0,
-      risk_level TEXT DEFAULT 'CLEAN'
+      risk_level TEXT DEFAULT 'CLEAN',
+      bot_probability REAL DEFAULT NULL
+    )
+  `);
+
+  try { database.exec('ALTER TABLE events ADD COLUMN bot_probability REAL DEFAULT NULL'); } catch (_) {}
+
+  database.exec(`
+    CREATE TABLE IF NOT EXISTS behavior_events (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      visitor_id TEXT,
+      account_id TEXT,
+      api_key_id INTEGER,
+      session_duration INTEGER,
+      mouse_move_count INTEGER DEFAULT 0,
+      click_count INTEGER DEFAULT 0,
+      keyboard_event_count INTEGER DEFAULT 0,
+      scroll_direction_changes INTEGER DEFAULT 0,
+      backspace_count INTEGER DEFAULT 0,
+      mouse_smoothness_score REAL DEFAULT 50,
+      typing_rhythm_score REAL DEFAULT 50,
+      bot_probability REAL DEFAULT 0,
+      page_timeline TEXT,
+      form_interactions TEXT,
+      collected_at INTEGER NOT NULL
     )
   `);
 

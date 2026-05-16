@@ -15,6 +15,13 @@ function calculateRiskScore(event) {
   if ((event.velocity_distinct_ip_24h || 0) > 3) score += 15;
   if (!event.visitor_found) score += 5;
 
+  const bp = event.bot_probability;
+  if (bp != null) {
+    if (bp > 80) score += 35;
+    else if (bp >= 50) score += 20;
+    else if (bp > 30) score += 10;
+  }
+
   score = Math.min(100, score);
 
   let level;

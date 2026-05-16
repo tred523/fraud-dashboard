@@ -20,7 +20,25 @@
       "Bash(curl -s http://localhost:5173)",
       "Bash(curl -s \"http://localhost:5173/src/pages/Graph.jsx\")",
       "Bash(curl -s \"http://localhost:5173/src/App.jsx\")",
-      "Bash(Select-Object Name, PSIsContainer)"
+      "Bash(Select-Object Name, PSIsContainer)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Projects\\\\fraud-dashboard\" -Recurse -Directory)",
+      "Bash(Select-Object -ExpandProperty FullName)",
+      "Bash(Sort-Object)",
+      "Bash(Start-Sleep -Seconds 2)",
+      "Bash(Invoke-RestMethod -Uri 'http://localhost:3001/api/overview')",
+      "Bash(ConvertTo-Json)",
+      "Bash(curl -s http://localhost:3001/api/overview)",
+      "Bash(pkill -f \"node server/index.js\")",
+      "Bash(fuser -k 3001/tcp)",
+      "Bash(lsof -ti:3001)",
+      "Bash(xargs kill -9)",
+      "Bash(killall node *)",
+      "Bash(PORT=3002 node server/index.js)",
+      "Bash(curl -s http://localhost:3002/api/overview)",
+      "Bash(curl -s -X POST http://localhost:3002/api/behavior -H \"Content-Type: application/json\" -d '{\"api_key\":\"demo_key_12345\",\"visitor_id\":\"test123\",\"mouse_move_count\":5,\"click_count\":3,\"keyboard_event_count\":0,\"scroll_direction_changes\":1,\"backspace_count\":0,\"mouse_smoothness_score\":90,\"typing_rhythm_score\":88,\"session_duration\":5000}')",
+      "Bash(curl -s http://localhost:3002/api/visitor/test123)",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('behavior count:', len\\(d.get\\('behavior',[]\\)\\), 'bot_prob:', d.get\\('behavior',[{}]\\)[0].get\\('bot_probability'\\) if d.get\\('behavior'\\) else 'N/A'\\)\")",
+      "Bash(curl *)"
     ]
   }
 }
