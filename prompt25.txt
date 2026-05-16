@@ -1,0 +1,5 @@
+Fix two issues in AccountDetail page:
+
+1. Fix "Invalid Date" - timestamps in account_events are stored as strings or integers. Make sure the date formatting function handles both Unix milliseconds (13 digits) and Unix seconds (10 digits). Use: new Date(ts > 1e12 ? ts : ts * 1000)
+
+2. Fix BIN lookup - the binlist.net API call in server/bin-lookup.js is not returning data. Add proper error handling and test with BIN 424242. If binlist.net fails, try https://api.bincodes.com/bin/?format=json&api_key=free&bin={bin} as fallback. Log the actual API response to console for debugging.

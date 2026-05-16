@@ -23,10 +23,29 @@ async function lookupBin(bin) {
   }
 
   try {
-    const { data } = await axios.get(`https://lookup.binlist.net/${b}`, {
-      headers: { 'Accept-Version': '3' },
-      timeout: 4000,
-    });
+    let data;
+    try {
+      const res = await axios.get(`https://lookup.binlist.net/${b}`, {
+        headers: { 'Accept-Version': '3' },
+        timeout: 4000,
+      });
+      console.log(`[BIN] binlist.net response for ${b}:`, JSON.stringify(res.data));
+      data = res.data;
+    } catch (primaryErr) {
+      console.warn(`[BIN] binlist.net failed for ${b}: ${primaryErr.message} — trying fallback`);
+      const res = await axios.get(`https://api.bincodes.com/bin/?format=json&api_key=free&bin=${b}`, {
+        timeout: 4000,
+      });
+      console.log(`[BIN] bincodes fallback response for ${b}:`, JSON.stringify(res.data));
+      const d = res.data;
+      data = {
+        bank: { name: d.bank || null },
+        type: d.type || null,
+        scheme: d.brand ? d.brand.toLowerCase() : null,
+        country: { alpha2: d.country_code || null },
+        prepaid: d.prepaid === 'true' || d.prepaid === true,
+      };
+    }
 
     const result = {
       bank_name: data.bank?.name || null,
@@ -62,7 +81,8 @@ async function lookupBin(bin) {
     }
 
     return result;
-  } catch {
+  } catch (err) {
+    console.error(`[BIN] lookup failed for ${b}:`, err.message);
     return null;
   }
 }

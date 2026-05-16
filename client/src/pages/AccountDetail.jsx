@@ -41,7 +41,8 @@ function countryFlag(code) {
 
 function fmt(ts) {
   if (!ts) return '—';
-  return new Date(ts).toLocaleString('en-GB', {
+  const ms = ts > 1e12 ? ts : ts * 1000;
+  return new Date(ms).toLocaleString('en-GB', {
     day: '2-digit', month: 'short', year: 'numeric',
     hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
   });
