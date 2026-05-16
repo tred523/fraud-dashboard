@@ -1,0 +1,1 @@
+Fix upload parser - visitor_id is null after import. In server/routes/upload.js the visitor_id should be extracted from identification.visitor_id field, not from a top-level visitor_id field. Check the parser and fix this extraction.

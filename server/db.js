@@ -157,7 +157,7 @@ function parseEvent(raw) {
   const event = {
     event_id:               raw.event_id || raw.requestId || String(Date.now() + Math.random()),
     timestamp:              toInt(raw.timestamp),
-    visitor_id:             raw.visitor_id || raw.visitorId || null,
+    visitor_id:             ident.visitor_id || raw.visitor_id || raw.visitorId || null,
     visitor_found:          ident.visitor_found !== undefined ? (ident.visitor_found ? 1 : 0) : (raw.visitor_found !== undefined ? (raw.visitor_found ? 1 : 0) : 1),
     first_seen_at:          toInt(ident.first_seen_at ?? raw.first_seen_at),
     last_seen_at:           toInt(ident.last_seen_at ?? raw.last_seen_at),
