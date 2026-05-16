@@ -149,6 +149,30 @@ async function initDb() {
 
   const { rows: beRows } = await pool.query('SELECT COUNT(*) as c FROM behavior_events');
   if (parseInt(beRows[0].c, 10) === 0) await seedBehaviorEvents();
+
+  await pool.query(`UPDATE events SET bot_probability = 90 WHERE visitor_id = '3NcqkuFKy9k7spPP0EW9'`);
+  await pool.query(`UPDATE events SET bot_probability = 75 WHERE visitor_id = 'LWrtj8049U0NHAfoVnuv'`);
+
+  await pool.query(`
+    UPDATE events SET risk_score = LEAST(100, (
+      CASE WHEN anti_detect_browser = 1 THEN 40 ELSE 0 END +
+      CASE WHEN tampering_ml_score > 0.5 THEN 25 WHEN tampering_ml_score >= 0.2 THEN 15 ELSE 0 END +
+      CASE WHEN virtual_machine = 1 THEN 20 ELSE 0 END +
+      CASE WHEN anomaly_score > 0 THEN 15 ELSE 0 END +
+      CASE WHEN bot_probability > 80 THEN 35 WHEN bot_probability >= 50 THEN 20 ELSE 0 END +
+      CASE WHEN suspect_score > 10 THEN 10 ELSE 0 END +
+      CASE WHEN visitor_found = 0 THEN 5 ELSE 0 END
+    ))
+  `);
+
+  await pool.query(`
+    UPDATE events SET risk_level = CASE
+      WHEN risk_score >= 66 THEN 'HIGH RISK'
+      WHEN risk_score >= 41 THEN 'SUSPICIOUS'
+      WHEN risk_score >= 21 THEN 'LOW'
+      ELSE 'CLEAN'
+    END
+  `);
 }
 
 const EVENT_COLS = [

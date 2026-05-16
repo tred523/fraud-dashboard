@@ -1,0 +1,20 @@
+Fix risk scoring in PostgreSQL version. Two issues:
+
+1. The seed events for visitor 3NcqkuFKy9k7spPP0EW9 should have bot_probability=90 but it's null. Update the seed data in server/db-postgres.js to set bot_probability=90 for events with visitor_id='3NcqkuFKy9k7spPP0EW9' and bot_probability=75 for visitor_id='LWrtj8049U0NHAfoVnuv'.
+
+2. The risk_score for existing events is wrong - recalculate it. After seeding, run UPDATE query to recalculate risk_score for all events based on:
+- anti_detect_browser=true → +40
+- tampering_ml_score > 0.5 → +25
+- tampering_ml_score 0.2-0.5 → +15  
+- virtual_machine=true → +20
+- anomaly_score > 0 → +15
+- bot_probability > 80 → +35
+- bot_probability 50-80 → +20
+- suspect_score > 10 → +10
+- visitor_found=false → +5
+
+Also update risk_level based on new risk_score:
+- 0-20: CLEAN
+- 21-40: LOW  
+- 41-65: SUSPICIOUS
+- 66+: HIGH RISK
