@@ -39,14 +39,13 @@ function countryFlag(code) {
   return [...code.toUpperCase()].map(c => String.fromCodePoint(c.charCodeAt(0) - 65 + 0x1F1E6)).join('');
 }
 
-function fmt(ts) {
+const fmt = (ts) => {
   if (!ts) return '—';
-  const ms = ts > 1e12 ? ts : ts * 1000;
-  return new Date(ms).toLocaleString('en-GB', {
-    day: '2-digit', month: 'short', year: 'numeric',
-    hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
-  });
-}
+  const n = Number(ts);
+  if (isNaN(n)) return ts;
+  const d = new Date(n > 9999999999 ? n : n * 1000);
+  return isNaN(d.getTime()) ? String(ts) : d.toLocaleString('en-GB');
+};
 
 function MetaTag({ label, value }) {
   if (!value && value !== 0) return null;

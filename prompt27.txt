@@ -1,0 +1,21 @@
+Fix two remaining issues in AccountDetail.jsx:
+
+1. Fix Invalid Date in Account Timeline and everywhere in AccountDetail.jsx:
+The timestamps from account_events are stored as TEXT in PostgreSQL. 
+In AccountDetail.jsx find the date formatting function and replace it with:
+const fmt = (ts) => {
+  if (!ts) return '—';
+  const n = Number(ts);
+  if (isNaN(n)) return ts;
+  const d = new Date(n > 9999999999 ? n : n * 1000);
+  return isNaN(d.getTime()) ? String(ts) : d.toLocaleString('en-GB');
+};
+
+2. Fix BIN lookup showing "?" - in server/bin-lookup.js the binlist.net API is not working.
+Replace it with a simple hardcoded BIN database for common test BINs:
+- 424242 → Visa, Credit, Test Bank, US
+- 411111 → Visa, Credit, JPMorgan Chase, US  
+- 510510 → Mastercard, Credit, Citibank, US
+- 400000 → Visa, Prepaid, Prepaid Services, US
+- 520000 → Mastercard, Virtual, Virtual Card Services, US
+For unknown BINs return: { card_brand: "Unknown", card_type: "Unknown", bank_name: "Unknown Bank", country: "Unknown", is_prepaid: false, is_virtual: false }
