@@ -1,0 +1,24 @@
+Fix the upload parser to correctly extract all fields from Fingerprint Pro JSON format.
+
+The record is being saved but city_name, country_code, os, browser_name, device fields are empty.
+
+Check server/routes/upload.js parser and make sure it correctly extracts:
+- city_name from ip_info.v4.geolocation.city_name
+- country_code from ip_info.v4.geolocation.country_code  
+- browser_name from browser_details.browser_name
+- os from browser_details.os
+- device from browser_details.device
+- asn_name from ip_info.v4.asn_name
+- font_hash from raw_device_attributes.font_hash
+- webgl_renderer_unmasked from raw_device_attributes.webgl_basics.renderer_unmasked
+- hardware_concurrency from raw_device_attributes.hardware_concurrency
+- device_memory from raw_device_attributes.device_memory
+- platform from raw_device_attributes.platform
+- anti_detect_browser from tampering_details.anti_detect_browser
+- anomaly_score from tampering_details.anomaly_score
+- velocity_distinct_ip_24h from velocity.distinct_ip.24_hours
+- velocity_events_24h from velocity.events.24_hours
+- first_seen_at from identification.first_seen_at
+- last_seen_at from identification.last_seen_at
+- visitor_found from identification.visitor_found
+- confidence_score from identification.confidence.score
