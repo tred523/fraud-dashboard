@@ -1,0 +1,9 @@
+Fix duplicate function error in client/src/pages/Accounts.jsx.
+The file has two declarations of function fmt(). Remove the old one and keep only the new one:
+const fmt = (ts) => {
+  if (!ts) return '—';
+  const n = Number(ts);
+  if (isNaN(n)) return ts;
+  const d = new Date(n > 9999999999 ? n : n * 1000);
+  return isNaN(d.getTime()) ? String(ts) : d.toLocaleString('en-GB');
+};
