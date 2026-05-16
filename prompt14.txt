@@ -1,0 +1,23 @@
+Add payment connection detection to the fraud dashboard.
+
+1. Add payment events support to POST /api/ingest endpoint:
+- event_type: "payment" with metadata: { card_last4, card_bin, paypal_email, amount, currency, status }
+
+2. Create new SQLite table: payment_signals (id, account_id, card_last4, card_bin, paypal_email, created_at)
+
+3. Add payment clustering logic in anomalies detection:
+- Find accounts sharing same card_last4 + card_bin combination
+- Find accounts sharing same paypal_email
+- Add new anomaly type: PAYMENT_SHARING with HIGH severity
+
+4. Add "Payment" section to Visitor Detail page showing:
+- List of payment methods used by this account
+- Other accounts that used the same payment method (linked accounts)
+- Risk indicator if payment is shared across multiple accounts
+
+5. Add payment connection edges to the Graph page:
+- New edge type: Payment (green color)
+- Connect visitor nodes that share payment methods
+- Add "Payment" filter button alongside IP/Font/GPU filters
+
+6. Update API Docs page to show payment event examples with card/paypal fields

@@ -73,10 +73,46 @@ $result = json_decode(curl_exec($ch), true);
 curl_close($ch);`,
 };
 
+const PAYMENT_SNIPPETS = {
+  card: `curl -X POST ${BASE_URL}/api/ingest \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "account_id": "user123",
+    "event_type": "payment",
+    "timestamp": ${Date.now()},
+    "ip_address": "203.0.113.42",
+    "metadata": {
+      "card_last4": "4242",
+      "card_bin": "424242",
+      "amount": 99.99,
+      "currency": "USD",
+      "status": "success"
+    },
+    "api_key": "${DEMO_KEY}"
+  }'`,
+
+  paypal: `curl -X POST ${BASE_URL}/api/ingest \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "account_id": "user456",
+    "event_type": "payment",
+    "timestamp": ${Date.now()},
+    "ip_address": "203.0.113.99",
+    "metadata": {
+      "paypal_email": "buyer@example.com",
+      "amount": 49.00,
+      "currency": "EUR",
+      "status": "success"
+    },
+    "api_key": "${DEMO_KEY}"
+  }'`,
+};
+
 import { useState } from 'react';
 
 export default function ApiDocs() {
   const [activeTab, setActiveTab] = useState('curl');
+  const [paymentTab, setPaymentTab] = useState('card');
 
   return (
     <div className="page">
@@ -194,6 +230,69 @@ export default function ApiDocs() {
           }}>
             {SNIPPETS[activeTab]}
           </pre>
+        </div>
+      </div>
+
+      {/* Payment event examples */}
+      <div className="card" style={{ marginTop: 20 }}>
+        <div className="card-header">
+          <span className="card-title">Payment Event Examples</span>
+          <span style={{ fontSize: 11, color: 'var(--text3)' }}>Used for payment connection detection</span>
+        </div>
+        <div style={{ padding: '0 18px 18px' }}>
+          <div style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 14, marginTop: 14 }}>
+            Payment events accept card or PayPal metadata. FraudShield detects when multiple accounts share the same payment method — a strong signal of synthetic identity fraud or account linking.
+          </div>
+
+          <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+            {[
+              { key: 'card',   label: '💳  Card (last4 + BIN)' },
+              { key: 'paypal', label: '🅿️  PayPal email' },
+            ].map(({ key, label }) => (
+              <button
+                key={key}
+                onClick={() => setPaymentTab(key)}
+                style={{
+                  padding: '6px 14px', borderRadius: 6, border: '1px solid var(--border)',
+                  background: paymentTab === key ? '#22c55e22' : 'var(--sidebar)',
+                  color: paymentTab === key ? '#22c55e' : 'var(--text2)',
+                  borderColor: paymentTab === key ? '#22c55e' : 'var(--border)',
+                  cursor: 'pointer', fontSize: 12, fontWeight: 600,
+                }}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+          <pre style={{
+            background: 'var(--sidebar)', border: '1px solid var(--border)', borderRadius: 8,
+            padding: 16, fontSize: 12, lineHeight: 1.6, overflowX: 'auto',
+            color: 'var(--text2)', fontFamily: 'monospace', margin: 0,
+          }}>
+            {PAYMENT_SNIPPETS[paymentTab]}
+          </pre>
+
+          <div style={{ marginTop: 14, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+            {[
+              { field: 'card_last4', type: 'string', desc: 'Last 4 digits of the card number' },
+              { field: 'card_bin',   type: 'string', desc: 'First 6 digits (Bank Identification Number)' },
+              { field: 'paypal_email', type: 'string', desc: 'PayPal account email address' },
+              { field: 'amount',     type: 'number', desc: 'Transaction amount' },
+              { field: 'currency',   type: 'string', desc: 'ISO 4217 currency code (USD, EUR…)' },
+              { field: 'status',     type: 'string', desc: 'Transaction status (success, failed…)' },
+            ].map(({ field, type, desc }) => (
+              <div key={field} style={{
+                display: 'grid', gridTemplateColumns: '130px 56px 1fr', gap: 8,
+                padding: '7px 10px', background: 'var(--sidebar)', borderRadius: 6,
+                border: '1px solid var(--border)', fontSize: 12,
+              }}>
+                <code style={{ color: 'var(--text2)', fontFamily: 'monospace' }}>{field}</code>
+                <span style={{ color: 'var(--text3)' }}>{type}</span>
+                <span style={{ color: 'var(--text2)' }}>{desc}</span>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </div>

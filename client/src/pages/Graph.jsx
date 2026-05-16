@@ -11,16 +11,18 @@ const RISK_COLORS = {
 };
 
 const LINK_COLORS = {
-  'IP':   '#3b82f6',
-  'Font': '#a855f7',
-  'GPU':  '#06b6d4',
+  'IP':      '#3b82f6',
+  'Font':    '#a855f7',
+  'GPU':     '#06b6d4',
+  'Payment': '#22c55e',
 };
 
 const FILTER_OPTIONS = [
-  { label: 'All',  value: 'All',  color: '#94a3b8' },
-  { label: 'IP',   value: 'IP',   color: LINK_COLORS.IP },
-  { label: 'Font', value: 'Font', color: LINK_COLORS.Font },
-  { label: 'GPU',  value: 'GPU',  color: LINK_COLORS.GPU },
+  { label: 'All',     value: 'All',     color: '#94a3b8' },
+  { label: 'IP',      value: 'IP',      color: LINK_COLORS.IP },
+  { label: 'Font',    value: 'Font',    color: LINK_COLORS.Font },
+  { label: 'GPU',     value: 'GPU',     color: LINK_COLORS.GPU },
+  { label: 'Payment', value: 'Payment', color: LINK_COLORS.Payment },
 ];
 
 export default function Graph() {
@@ -116,7 +118,7 @@ export default function Graph() {
       <div className="page-header" style={{ marginBottom: 0 }}>
         <div>
           <h1 className="page-title">Account Relationship Graph</h1>
-          <p className="page-subtitle">Visitor connections via shared IP, font fingerprint, and GPU</p>
+          <p className="page-subtitle">Visitor connections via shared IP, font fingerprint, GPU, and payment methods</p>
         </div>
       </div>
 
@@ -207,7 +209,7 @@ export default function Graph() {
               <div key={type} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 7 }}>
                 <div style={{ width: 22, height: 2, background: color, flexShrink: 0, borderRadius: 1 }} />
                 <span style={{ fontSize: 12, color: 'var(--text2)' }}>
-                  {type === 'IP' ? 'IP Address' : type === 'Font' ? 'Font Hash' : 'GPU / WebGL'}
+                  {type === 'IP' ? 'IP Address' : type === 'Font' ? 'Font Hash' : type === 'GPU' ? 'GPU / WebGL' : 'Payment Method'}
                 </span>
               </div>
             ))}

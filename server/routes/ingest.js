@@ -30,6 +30,16 @@ router.post('/', (req, res) => {
     VALUES (?, ?, ?, ?, ?, ?, ?)
   `).run(account_id, event_type, ts, ip_address || null, user_agent || null, metadataStr, keyRow.id);
 
+  if (event_type === 'payment' && metadata) {
+    const { card_last4, card_bin, paypal_email } = metadata;
+    if (card_last4 || paypal_email) {
+      db.prepare(`
+        INSERT INTO payment_signals (account_id, card_last4, card_bin, paypal_email, created_at)
+        VALUES (?, ?, ?, ?, ?)
+      `).run(account_id, card_last4 || null, card_bin || null, paypal_email || null, ts);
+    }
+  }
+
   res.json({ success: true, message: 'Event ingested' });
 });
 

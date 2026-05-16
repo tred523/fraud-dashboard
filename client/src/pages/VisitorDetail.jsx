@@ -203,7 +203,7 @@ export default function VisitorDetail() {
   if (error)   return <div className="page"><div className="empty-state"><div className="empty-icon">⚠️</div><div className="empty-text">{error}</div></div></div>;
   if (!data)   return null;
 
-  const { events, related, account_timeline, behavior } = data;
+  const { events, related, account_timeline, behavior, payment } = data;
   const latest = events[events.length - 1];
   const maxRiskLevel = events.reduce((m, e) => {
     const order = { CLEAN: 0, LOW: 1, SUSPICIOUS: 2, 'HIGH RISK': 3 };
@@ -413,7 +413,7 @@ export default function VisitorDetail() {
 
           {/* Related Visitors */}
           {uniqueRelated.length > 0 && (
-            <div className="card">
+            <div className="card" style={{ marginBottom: 20 }}>
               <div className="card-header"><span className="card-title">Related Visitors</span></div>
               <div style={{ padding: 14 }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -434,6 +434,54 @@ export default function VisitorDetail() {
                     </div>
                   ))}
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* Payment Methods */}
+          {payment && payment.methods.length > 0 && (
+            <div className="card">
+              <div className="card-header">
+                <span className="card-title">Payment Methods</span>
+                {payment.is_shared && (
+                  <span style={{
+                    fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 3,
+                    background: '#ef444422', color: '#ef4444', letterSpacing: '.04em',
+                  }}>
+                    SHARED
+                  </span>
+                )}
+              </div>
+              <div style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {payment.methods.map((method) => (
+                  <div key={method.id} style={{
+                    padding: '10px 12px', background: 'var(--sidebar)', borderRadius: 6,
+                    border: `1px solid ${method.linked_accounts.length > 0 ? '#ef444444' : 'var(--border)'}`,
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: method.linked_accounts.length > 0 ? 6 : 0 }}>
+                      <span style={{ fontSize: 16 }}>{method.paypal_email ? '🅿️' : '💳'}</span>
+                      <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text1)', fontFamily: 'monospace' }}>
+                        {method.paypal_email ? method.paypal_email : `•••• •••• •••• ${method.card_last4}`}
+                      </span>
+                      {method.card_bin && (
+                        <span style={{ fontSize: 11, color: 'var(--text3)' }}>BIN: {method.card_bin}</span>
+                      )}
+                      {method.linked_accounts.length > 0 && (
+                        <span style={{
+                          marginLeft: 'auto', fontSize: 10, fontWeight: 700, padding: '2px 6px',
+                          borderRadius: 3, background: '#ef444422', color: '#ef4444', whiteSpace: 'nowrap',
+                        }}>
+                          {method.linked_accounts.length} other account{method.linked_accounts.length !== 1 ? 's' : ''}
+                        </span>
+                      )}
+                    </div>
+                    {method.linked_accounts.length > 0 && (
+                      <div style={{ fontSize: 11, color: 'var(--text3)', paddingLeft: 24 }}>
+                        Also used by: <span style={{ color: '#ef4444', fontFamily: 'monospace' }}>{method.linked_accounts.join(', ')}</span>
+                      </div>
+                    )}
+                  </div>
+                ))}
               </div>
             </div>
           )}

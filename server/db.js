@@ -100,6 +100,17 @@ function initDb() {
     )
   `);
 
+  database.exec(`
+    CREATE TABLE IF NOT EXISTS payment_signals (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      account_id TEXT NOT NULL,
+      card_last4 TEXT,
+      card_bin TEXT,
+      paypal_email TEXT,
+      created_at INTEGER NOT NULL
+    )
+  `);
+
   const demoKey = database.prepare("SELECT id FROM api_keys WHERE key = 'demo_key_12345'").get();
   if (!demoKey) {
     database.prepare("INSERT INTO api_keys (key, client_name, created_at) VALUES ('demo_key_12345', 'Demo Client', ?)").run(Date.now());

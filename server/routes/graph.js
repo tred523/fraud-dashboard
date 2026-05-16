@@ -33,13 +33,30 @@ router.get('/', (_req, res) => {
     WHERE a.webgl_renderer_unmasked IS NOT NULL AND a.webgl_renderer_unmasked != ''
   `).all().map(l => ({ ...l, type: 'GPU' }));
 
+  const paymentLinks = db.prepare(`
+    SELECT DISTINCT
+      CASE WHEN a.visitor_id < b.visitor_id THEN a.visitor_id ELSE b.visitor_id END as source,
+      CASE WHEN a.visitor_id < b.visitor_id THEN b.visitor_id ELSE a.visitor_id END as target
+    FROM payment_signals ps1
+    JOIN payment_signals ps2 ON ps1.account_id != ps2.account_id
+      AND (
+        (ps1.card_last4 IS NOT NULL AND ps1.card_last4 = ps2.card_last4 AND ps1.card_bin = ps2.card_bin)
+        OR (ps1.paypal_email IS NOT NULL AND ps1.paypal_email = ps2.paypal_email)
+      )
+    JOIN account_events ae1 ON ae1.account_id = ps1.account_id AND ae1.ip_address IS NOT NULL
+    JOIN account_events ae2 ON ae2.account_id = ps2.account_id AND ae2.ip_address IS NOT NULL
+    JOIN events a ON a.ip_address = ae1.ip_address
+    JOIN events b ON b.ip_address = ae2.ip_address
+    WHERE a.visitor_id != b.visitor_id
+  `).all().map(l => ({ ...l, type: 'Payment' }));
+
   res.json({
     nodes: nodes.map(n => ({
       id: n.visitor_id,
       riskLevel: n.risk_level,
       eventCount: n.event_count,
     })),
-    links: [...ipLinks, ...fontLinks, ...gpuLinks],
+    links: [...ipLinks, ...fontLinks, ...gpuLinks, ...paymentLinks],
   });
 });
 

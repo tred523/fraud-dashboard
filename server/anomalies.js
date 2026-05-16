@@ -194,6 +194,54 @@ function detectAnomalies(db) {
     });
   }
 
+  // g) Payment Sharing (card)
+  const cardSharing = db.prepare(`
+    SELECT card_last4, card_bin,
+           GROUP_CONCAT(DISTINCT account_id) as account_ids,
+           COUNT(DISTINCT account_id) as cnt
+    FROM payment_signals
+    WHERE card_last4 IS NOT NULL AND card_bin IS NOT NULL
+    GROUP BY card_last4, card_bin
+    HAVING cnt > 1
+    ORDER BY cnt DESC
+  `).all();
+
+  for (const row of cardSharing) {
+    anomalies.push({
+      type: 'PAYMENT_SHARING',
+      severity: 'HIGH',
+      description: `${row.cnt} accounts share card •••• ${row.card_last4} (BIN ${row.card_bin})`,
+      detail: 'Multiple distinct accounts have conducted payments with the same card (matching BIN + last 4 digits). This is a strong signal of synthetic identity fraud, card sharing, or account takeover.',
+      shared_value: `${row.card_bin}/${row.card_last4}`,
+      visitor_ids: row.account_ids.split(','),
+      count: row.cnt,
+    });
+  }
+
+  // h) Payment Sharing (PayPal)
+  const paypalSharing = db.prepare(`
+    SELECT paypal_email,
+           GROUP_CONCAT(DISTINCT account_id) as account_ids,
+           COUNT(DISTINCT account_id) as cnt
+    FROM payment_signals
+    WHERE paypal_email IS NOT NULL AND paypal_email != ''
+    GROUP BY paypal_email
+    HAVING cnt > 1
+    ORDER BY cnt DESC
+  `).all();
+
+  for (const row of paypalSharing) {
+    anomalies.push({
+      type: 'PAYMENT_SHARING',
+      severity: 'HIGH',
+      description: `${row.cnt} accounts share PayPal ${row.paypal_email}`,
+      detail: 'Multiple accounts have conducted payments using the same PayPal email address. This indicates shared payment credentials, which may signal account linking or coordinated fraud.',
+      shared_value: row.paypal_email,
+      visitor_ids: row.account_ids.split(','),
+      count: row.cnt,
+    });
+  }
+
   return anomalies;
 }
 
