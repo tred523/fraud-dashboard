@@ -20,6 +20,7 @@ app.use('/api/clusters',  require('./routes/clusters'));
 app.use('/api/graph',     require('./routes/graph'));
 app.use('/api/ingest',    require('./routes/ingest'));
 app.use('/api/behavior', require('./routes/behavior'));
+app.use('/api/verdict', require('./routes/verdict'));
 
 if (process.env.NODE_ENV === 'production') {
   const dist = path.join(__dirname, '../client/dist');

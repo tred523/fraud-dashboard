@@ -20,6 +20,9 @@ export function fetchEvents(filters = {}) {
   return get(`/events?${p}`);
 }
 
+export const fetchVerdict      = (id)  => get(`/verdict/${encodeURIComponent(id)}`);
+export const fetchVerdictBatch = (ids) => get(`/verdict/batch?ids=${ids.map(encodeURIComponent).join(',')}`);
+
 export async function uploadFile(file) {
   const fd = new FormData();
   fd.append('file', file);

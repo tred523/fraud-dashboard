@@ -1,0 +1,39 @@
+Add AI verdict system to the fraud dashboard.
+
+1. Create server/verdict.js that calculates a final verdict for each visitor_id based on all available signals:
+
+Collect all signals for a visitor:
+- Max risk_score across all their events
+- Any anti_detect_browser flags
+- Any virtual_machine flags  
+- Bot probability from behavior_events
+- Number of anomalies linked to this visitor
+- Payment sharing with other accounts
+- Rapid IP changes
+- VM/MacIntel contradictions
+
+Calculate verdict score 0-100 and assign:
+- TRUSTED (0-25): clean device, no anomalies, normal behavior
+- MONITOR (26-50): some suspicious signals, worth watching
+- SUSPICIOUS (51-75): multiple red flags, investigate
+- BLOCK (76-100): clear fraud indicators, recommend blocking
+
+2. Add GET /api/verdict/:visitor_id endpoint that returns:
+{
+  "visitor_id": "...",
+  "verdict": "BLOCK",
+  "verdict_score": 92,
+  "confidence": "HIGH",
+  "reasons": ["Anti-detect browser detected", "Virtual machine contradiction", "Rapid IP change within 2 minutes"],
+  "recommended_action": "Block this account immediately",
+  "signals_summary": { ... }
+}
+
+3. Add verdict badge to Visitor Detail page:
+- Large colored badge at top: TRUSTED (green), MONITOR (yellow), SUSPICIOUS (orange), BLOCK (red)
+- "Why?" section showing the reasons list
+- "Recommended Action" text
+- Confidence indicator (LOW/MEDIUM/HIGH)
+
+4. Add verdict column to Overview page events table
+5. Add verdict filter to Overview page (All / TRUSTED / MONITOR / SUSPICIOUS / BLOCK)

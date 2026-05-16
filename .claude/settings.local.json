@@ -48,7 +48,9 @@
       "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(f'nodes: {len\\(d[\\\\\"nodes\\\\\"]\\)}, links: {len\\(d[\\\\\"links\\\\\"]\\)}, types: {set\\(l[\\\\\"type\\\\\"] for l in d[\\\\\"links\\\\\"]\\)}'\\)\")",
       "Bash(Get-ChildItem -Path \"C:\\\\Projects\\\\fraud-dashboard\\\\server\\\\routes\")",
       "Bash(where npm *)",
-      "Bash(npm install *)"
+      "Bash(npm install *)",
+      "Bash(Select-Object FullName)",
+      "Bash(kill %1)"
     ]
   }
 }

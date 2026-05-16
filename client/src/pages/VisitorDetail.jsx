@@ -3,9 +3,10 @@ import { useParams, Link } from 'react-router-dom';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts';
-import { fetchVisitor } from '../api';
+import { fetchVisitor, fetchVerdict } from '../api';
 import RiskBadge, { riskColor } from '../components/RiskBadge';
 import Flags, { FlagExplanations } from '../components/Flags';
+import VerdictBadge, { verdictColor } from '../components/VerdictBadge';
 
 const EVENT_ICONS = {
   login: '🔑',
@@ -186,6 +187,7 @@ function BehaviorTab({ behavior }) {
 export default function VisitorDetail() {
   const { id } = useParams();
   const [data, setData] = useState(null);
+  const [verdict, setVerdict] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('overview');
@@ -193,10 +195,12 @@ export default function VisitorDetail() {
   useEffect(() => {
     setLoading(true);
     setError(null);
+    setVerdict(null);
     fetchVisitor(id)
       .then(setData)
       .catch(e => setError(e.message))
       .finally(() => setLoading(false));
+    fetchVerdict(id).then(setVerdict).catch(() => {});
   }, [id]);
 
   if (loading) return <div className="loading">Loading visitor data…</div>;
@@ -267,6 +271,49 @@ export default function VisitorDetail() {
       {activeTab === 'behavior' ? (
         <BehaviorTab behavior={behavior} />
       ) : null}
+
+      {activeTab === 'overview' && verdict && (
+        <div className="card" style={{ marginBottom: 20 }}>
+          <div style={{ padding: '18px 20px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: verdict.reasons.length > 0 ? 16 : 0 }}>
+              <VerdictBadge verdict={verdict.verdict} score={verdict.verdict_score} size="lg" />
+              <div>
+                <div style={{ fontSize: 11, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 3 }}>
+                  AI Verdict
+                </div>
+                <div style={{ fontSize: 12, color: 'var(--text2)' }}>
+                  Confidence:{' '}
+                  <span style={{ fontWeight: 700, color: verdict.confidence === 'HIGH' ? '#ef4444' : verdict.confidence === 'MEDIUM' ? '#f97316' : '#22c55e' }}>
+                    {verdict.confidence}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {verdict.reasons.length > 0 && (
+              <div style={{ marginBottom: 14 }}>
+                <div style={{ fontSize: 11, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 8 }}>
+                  Why?
+                </div>
+                <ul style={{ margin: 0, padding: '0 0 0 18px', display: 'flex', flexDirection: 'column', gap: 5 }}>
+                  {verdict.reasons.map((r, i) => (
+                    <li key={i} style={{ fontSize: 13, color: 'var(--text2)' }}>{r}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            <div style={{ padding: '10px 14px', background: 'var(--sidebar)', borderRadius: 6, border: '1px solid var(--border)' }}>
+              <div style={{ fontSize: 10, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 4 }}>
+                Recommended Action
+              </div>
+              <div style={{ fontSize: 13, color: 'var(--text1)', fontWeight: 500 }}>
+                {verdict.recommended_action}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {activeTab === 'overview' && <div className="detail-grid">
         {/* Left column */}

@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { fetchOverview, fetchEvents, fetchCountries } from '../api';
+import { fetchOverview, fetchEvents, fetchCountries, fetchVerdictBatch } from '../api';
 import RiskBadge from '../components/RiskBadge';
 import Flags from '../components/Flags';
+import VerdictBadge from '../components/VerdictBadge';
 
 function LiveDot({ lastWebhookAt }) {
   const isLive = lastWebhookAt && (Date.now() - lastWebhookAt < 5 * 60 * 1000);
@@ -31,6 +32,8 @@ export default function Overview() {
   const [total, setTotal]         = useState(0);
   const [countries, setCountries] = useState([]);
   const [filters, setFilters]     = useState({ risk_level: '', country: '', flag: '' });
+  const [verdictFilter, setVerdictFilter] = useState('');
+  const [verdicts, setVerdicts]   = useState({});
   const [loading, setLoading]     = useState(true);
 
   useEffect(() => {
@@ -41,7 +44,16 @@ export default function Overview() {
   const load = useCallback(() => {
     setLoading(true);
     fetchEvents(filters)
-      .then(d => { setEvents(d.events); setTotal(d.total); })
+      .then(d => {
+        setEvents(d.events);
+        setTotal(d.total);
+        const uniqueIds = [...new Set(d.events.map(e => e.visitor_id))];
+        if (uniqueIds.length > 0) {
+          fetchVerdictBatch(uniqueIds).then(setVerdicts).catch(console.error);
+        } else {
+          setVerdicts({});
+        }
+      })
       .catch(console.error)
       .finally(() => setLoading(false));
   }, [filters]);
@@ -120,9 +132,16 @@ export default function Overview() {
           <option value="tampering">Tampering</option>
           <option value="bot">Bot</option>
         </select>
-        {(filters.risk_level || filters.country || filters.flag) && (
+        <select className="filter-select" value={verdictFilter} onChange={e => setVerdictFilter(e.target.value)}>
+          <option value="">All Verdicts</option>
+          <option value="TRUSTED">Trusted</option>
+          <option value="MONITOR">Monitor</option>
+          <option value="SUSPICIOUS">Suspicious</option>
+          <option value="BLOCK">Block</option>
+        </select>
+        {(filters.risk_level || filters.country || filters.flag || verdictFilter) && (
           <button className="btn btn-ghost" style={{ fontSize: 12, padding: '5px 10px' }}
-            onClick={() => setFilters({ risk_level: '', country: '', flag: '' })}>
+            onClick={() => { setFilters({ risk_level: '', country: '', flag: '' }); setVerdictFilter(''); }}>
             Clear filters
           </button>
         )}
@@ -136,49 +155,60 @@ export default function Overview() {
         <div className="table-wrap">
           {loading ? (
             <div className="loading">Loading events…</div>
-          ) : events.length === 0 ? (
-            <div className="empty-state">
-              <div className="empty-icon">🔍</div>
-              <div className="empty-text">No events match the current filters.</div>
-            </div>
-          ) : (
-            <table>
-              <thead>
-                <tr>
-                  <th>Timestamp</th>
-                  <th>Visitor ID</th>
-                  <th>City</th>
-                  <th>OS / Device</th>
-                  <th>Risk Score</th>
-                  <th>Flags</th>
-                </tr>
-              </thead>
-              <tbody>
-                {events.map(ev => (
-                  <tr key={ev.id} className="clickable" onClick={() => navigate(`/visitor/${ev.visitor_id}`)}>
-                    <td style={{ color: 'var(--text3)', fontSize: 12, whiteSpace: 'nowrap' }}>{fmt(ev.timestamp)}</td>
-                    <td>
-                      <span className="mono truncate" style={{ display: 'block', color: 'var(--blue)', maxWidth: 140 }} title={ev.visitor_id}>
-                        {ev.visitor_id}
-                      </span>
-                    </td>
-                    <td style={{ whiteSpace: 'nowrap' }}>
-                      {ev.city_name || '—'}
-                      {ev.country_code && <span style={{ marginLeft: 5, fontSize: 11, color: 'var(--text3)' }}>{ev.country_code}</span>}
-                    </td>
-                    <td style={{ whiteSpace: 'nowrap' }}>
-                      <span style={{ color: 'var(--text)' }}>{ev.os || '—'}</span>
-                      {ev.browser_name && <span style={{ marginLeft: 6, fontSize: 11, color: 'var(--text3)' }}>{ev.browser_name}</span>}
-                    </td>
-                    <td>
-                      <RiskBadge level={ev.risk_level} score={ev.risk_score} />
-                    </td>
-                    <td><Flags event={ev} /></td>
+          ) : (() => {
+            const displayEvents = verdictFilter
+              ? events.filter(ev => verdicts[ev.visitor_id]?.verdict === verdictFilter)
+              : events;
+            return displayEvents.length === 0 ? (
+              <div className="empty-state">
+                <div className="empty-icon">🔍</div>
+                <div className="empty-text">No events match the current filters.</div>
+              </div>
+            ) : (
+              <table>
+                <thead>
+                  <tr>
+                    <th>Timestamp</th>
+                    <th>Visitor ID</th>
+                    <th>City</th>
+                    <th>OS / Device</th>
+                    <th>Risk Score</th>
+                    <th>Verdict</th>
+                    <th>Flags</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
+                </thead>
+                <tbody>
+                  {displayEvents.map(ev => (
+                    <tr key={ev.id} className="clickable" onClick={() => navigate(`/visitor/${ev.visitor_id}`)}>
+                      <td style={{ color: 'var(--text3)', fontSize: 12, whiteSpace: 'nowrap' }}>{fmt(ev.timestamp)}</td>
+                      <td>
+                        <span className="mono truncate" style={{ display: 'block', color: 'var(--blue)', maxWidth: 140 }} title={ev.visitor_id}>
+                          {ev.visitor_id}
+                        </span>
+                      </td>
+                      <td style={{ whiteSpace: 'nowrap' }}>
+                        {ev.city_name || '—'}
+                        {ev.country_code && <span style={{ marginLeft: 5, fontSize: 11, color: 'var(--text3)' }}>{ev.country_code}</span>}
+                      </td>
+                      <td style={{ whiteSpace: 'nowrap' }}>
+                        <span style={{ color: 'var(--text)' }}>{ev.os || '—'}</span>
+                        {ev.browser_name && <span style={{ marginLeft: 6, fontSize: 11, color: 'var(--text3)' }}>{ev.browser_name}</span>}
+                      </td>
+                      <td>
+                        <RiskBadge level={ev.risk_level} score={ev.risk_score} />
+                      </td>
+                      <td>
+                        {verdicts[ev.visitor_id]
+                          ? <VerdictBadge verdict={verdicts[ev.visitor_id].verdict} score={verdicts[ev.visitor_id].verdict_score} />
+                          : <span style={{ color: 'var(--text3)', fontSize: 11 }}>—</span>}
+                      </td>
+                      <td><Flags event={ev} /></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            );
+          })()}
         </div>
       </div>
     </div>
