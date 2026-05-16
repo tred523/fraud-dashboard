@@ -138,8 +138,17 @@ async function initDb() {
     [Date.now()]
   );
 
+  const { rows: keyRows } = await pool.query(`SELECT id FROM api_keys WHERE key = 'demo_key_12345'`);
+  const demoKeyId = keyRows[0].id;
+
   const { rows } = await pool.query('SELECT COUNT(*) as c FROM events');
   if (parseInt(rows[0].c, 10) === 0) await insertEvents(SAMPLE_DATA);
+
+  const { rows: aeRows } = await pool.query('SELECT COUNT(*) as c FROM account_events');
+  if (parseInt(aeRows[0].c, 10) === 0) await seedAccountEvents(demoKeyId);
+
+  const { rows: beRows } = await pool.query('SELECT COUNT(*) as c FROM behavior_events');
+  if (parseInt(beRows[0].c, 10) === 0) await seedBehaviorEvents();
 }
 
 const EVENT_COLS = [
@@ -171,6 +180,38 @@ async function insertEvents(events) {
     throw e;
   } finally {
     client.release();
+  }
+}
+
+async function seedAccountEvents(apiKeyId) {
+  const now = Date.now();
+  const rows = [
+    { account_id: 'hC3zBmBTw08JSdez0Xto', event_type: 'login',           timestamp: now - 3600000 * 5, ip_address: '176.0.82.172' },
+    { account_id: 'P0olT9ooM2qltqlotSEV', event_type: 'login',           timestamp: now - 3600000 * 4, ip_address: null },
+    { account_id: 'P0olT9ooM2qltqlotSEV', event_type: 'settings_change', timestamp: now - 3600000 * 3, ip_address: null },
+    { account_id: '3NcqkuFKy9k7spPP0EW9', event_type: 'login',           timestamp: now - 3600000 * 6, ip_address: null },
+    { account_id: '3NcqkuFKy9k7spPP0EW9', event_type: 'payment',         timestamp: now - 3600000 * 2, ip_address: null },
+    { account_id: '3NcqkuFKy9k7spPP0EW9', event_type: 'export',          timestamp: now - 3600000 * 1, ip_address: null },
+  ];
+  for (const r of rows) {
+    await pool.query(
+      `INSERT INTO account_events (account_id, event_type, timestamp, ip_address, api_key_id) VALUES ($1, $2, $3, $4, $5)`,
+      [r.account_id, r.event_type, r.timestamp, r.ip_address, apiKeyId]
+    );
+  }
+}
+
+async function seedBehaviorEvents() {
+  const now = Date.now();
+  const rows = [
+    { visitor_id: '3NcqkuFKy9k7spPP0EW9', bot_probability: 90, mouse_smoothness_score: 92, typing_rhythm_score: 95 },
+    { visitor_id: 'LWrtj8049U0NHAfoVnuv', bot_probability: 75, mouse_smoothness_score: 80, typing_rhythm_score: 70 },
+  ];
+  for (const r of rows) {
+    await pool.query(
+      `INSERT INTO behavior_events (visitor_id, bot_probability, mouse_smoothness_score, typing_rhythm_score, collected_at) VALUES ($1, $2, $3, $4, $5)`,
+      [r.visitor_id, r.bot_probability, r.mouse_smoothness_score, r.typing_rhythm_score, now]
+    );
   }
 }
 
