@@ -7,6 +7,16 @@ import { fetchVisitor } from '../api';
 import RiskBadge, { riskColor } from '../components/RiskBadge';
 import Flags, { FlagExplanations } from '../components/Flags';
 
+const EVENT_ICONS = {
+  login: '🔑',
+  signup: '✨',
+  payment: '💳',
+  password_change: '🔒',
+  api_call: '⚡',
+  export: '📤',
+  settings_change: '⚙️',
+};
+
 function fmt(ts) {
   if (!ts) return '—';
   return new Date(ts).toLocaleString('en-GB', {
@@ -45,7 +55,7 @@ export default function VisitorDetail() {
   if (error)   return <div className="page"><div className="empty-state"><div className="empty-icon">⚠️</div><div className="empty-text">{error}</div></div></div>;
   if (!data)   return null;
 
-  const { events, related } = data;
+  const { events, related, account_timeline } = data;
   const latest = events[events.length - 1];
   const maxRiskLevel = events.reduce((m, e) => {
     const order = { CLEAN: 0, LOW: 1, SUSPICIOUS: 2, 'HIGH RISK': 3 };
@@ -160,12 +170,49 @@ export default function VisitorDetail() {
           </div>
 
           {/* Flags & Explanations */}
-          <div className="card">
+          <div className="card" style={{ marginBottom: 20 }}>
             <div className="card-header"><span className="card-title">Fraud Signals</span></div>
             <div style={{ padding: 16 }}>
               <FlagExplanations event={latest} />
             </div>
           </div>
+
+          {/* Account Activity Timeline */}
+          {account_timeline && account_timeline.length > 0 && (
+            <div className="card">
+              <div className="card-header">
+                <span className="card-title">Account Activity</span>
+                <span style={{ fontSize: 12, color: 'var(--text3)' }}>{account_timeline.length} action{account_timeline.length !== 1 ? 's' : ''} via shared IP</span>
+              </div>
+              <div style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {account_timeline.map(ev => {
+                  const meta = ev.metadata ? (() => { try { return JSON.parse(ev.metadata); } catch { return {}; } })() : {};
+                  const metaSummary = Object.entries(meta).map(([k, v]) => `${k}: ${v}`).join(' · ');
+                  return (
+                    <div key={ev.id} style={{
+                      padding: '10px 12px', background: 'var(--sidebar)', borderRadius: 6,
+                      border: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 4,
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{
+                          fontSize: 10, fontWeight: 700, padding: '2px 6px', borderRadius: 3,
+                          background: 'var(--blue)', color: '#fff', letterSpacing: '0.05em',
+                        }}>
+                          {EVENT_ICONS[ev.event_type] || '◆'} {ev.event_type.replace(/_/g, ' ').toUpperCase()}
+                        </span>
+                        <span style={{ fontSize: 11, color: 'var(--text3)', marginLeft: 'auto' }}>{fmt(ev.timestamp)}</span>
+                      </div>
+                      <div style={{ display: 'flex', gap: 12, fontSize: 11, color: 'var(--text3)' }}>
+                        {ev.ip_address && <span className="mono">{ev.ip_address}</span>}
+                        <span style={{ color: 'var(--text2)' }}>{ev.account_id}</span>
+                        {metaSummary && <span>{metaSummary}</span>}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Right column */}

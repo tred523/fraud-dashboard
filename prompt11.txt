@@ -1,0 +1,33 @@
+Add a universal REST API for client integration. This allows any SaaS product to send account activity events to the fraud dashboard.
+
+1. Create POST /api/ingest endpoint that accepts:
+{
+  "account_id": "user123",
+  "event_type": "login|signup|payment|password_change|api_call|export|settings_change",
+  "timestamp": 1234567890,
+  "ip_address": "1.2.3.4",
+  "user_agent": "Mozilla...",
+  "metadata": {
+    "amount": 100,
+    "country": "DE",
+    "success": true
+  },
+  "api_key": "client_api_key_here"
+}
+
+2. Create API keys system - store in SQLite table: api_keys (id, key, client_name, created_at)
+3. Pre-generate one demo API key: "demo_key_12345"
+4. Store ingested events in new table: account_events (id, account_id, event_type, timestamp, ip_address, user_agent, metadata, api_key_id)
+
+5. Add account timeline to Visitor Detail page:
+- Link account_events to visitor_id via matching ip_address
+- Show chronological list of account actions below the existing content
+- Each action shows: timestamp, event_type (with icon), IP, metadata summary
+
+6. Create new page "API Docs" in sidebar with:
+- How to send events (curl example)
+- List of supported event types
+- Demo API key to test with
+- Code snippets for Node.js, Python, PHP
+
+7. Add "Account Activity" metric card on Overview showing total account events ingested

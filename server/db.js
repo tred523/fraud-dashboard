@@ -54,6 +54,33 @@ function initDb() {
     )
   `);
 
+  database.exec(`
+    CREATE TABLE IF NOT EXISTS api_keys (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      key TEXT UNIQUE NOT NULL,
+      client_name TEXT NOT NULL,
+      created_at INTEGER NOT NULL
+    )
+  `);
+
+  database.exec(`
+    CREATE TABLE IF NOT EXISTS account_events (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      account_id TEXT NOT NULL,
+      event_type TEXT NOT NULL,
+      timestamp INTEGER NOT NULL,
+      ip_address TEXT,
+      user_agent TEXT,
+      metadata TEXT,
+      api_key_id INTEGER NOT NULL
+    )
+  `);
+
+  const demoKey = database.prepare("SELECT id FROM api_keys WHERE key = 'demo_key_12345'").get();
+  if (!demoKey) {
+    database.prepare("INSERT INTO api_keys (key, client_name, created_at) VALUES ('demo_key_12345', 'Demo Client', ?)").run(Date.now());
+  }
+
   const count = database.prepare('SELECT COUNT(*) as c FROM events').get().c;
   if (count === 0) insertEvents(SAMPLE_DATA);
 }

@@ -18,6 +18,7 @@ app.use('/api/overview',  require('./routes/overview'));
 app.use('/api/anomalies', require('./routes/anomalies'));
 app.use('/api/clusters',  require('./routes/clusters'));
 app.use('/api/graph',     require('./routes/graph'));
+app.use('/api/ingest',   require('./routes/ingest'));
 
 if (process.env.NODE_ENV === 'production') {
   const dist = path.join(__dirname, '../client/dist');

@@ -86,6 +86,11 @@ export default function Overview() {
           <div className="metric-value metric-accent-blue">{overview?.anomalies_found ?? '—'}</div>
           <div className="metric-sub">cross-visitor patterns</div>
         </div>
+        <div className="metric-card">
+          <div className="metric-label">Account Activity</div>
+          <div className="metric-value metric-accent-orange">{overview?.total_account_events ?? '—'}</div>
+          <div className="metric-sub">ingested via API</div>
+        </div>
       </div>
 
       {/* Filters */}

@@ -19,7 +19,8 @@
       "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(f'Nodes: {len\\(d[\\\\\"nodes\\\\\"]\\)}, Links: {len\\(d[\\\\\"links\\\\\"]\\)}'\\)\")",
       "Bash(curl -s http://localhost:5173)",
       "Bash(curl -s \"http://localhost:5173/src/pages/Graph.jsx\")",
-      "Bash(curl -s \"http://localhost:5173/src/App.jsx\")"
+      "Bash(curl -s \"http://localhost:5173/src/App.jsx\")",
+      "Bash(Select-Object Name, PSIsContainer)"
     ]
   }
 }

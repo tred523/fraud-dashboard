@@ -31,7 +31,16 @@ router.get('/:visitorId', (req, res) => {
     ? db.prepare(`SELECT DISTINCT visitor_id, webgl_renderer_unmasked FROM events WHERE webgl_renderer_unmasked IN (${ph(webgls)}) AND visitor_id != ?`).all(...webgls, visitorId)
     : [];
 
-  res.json({ events, related: { by_ip: byIp, by_font: byFont, by_webgl: byWebgl } });
+  const accountTimeline = ips.length
+    ? db.prepare(
+        `SELECT ae.*, ak.client_name FROM account_events ae
+         JOIN api_keys ak ON ae.api_key_id = ak.id
+         WHERE ae.ip_address IN (${ph(ips)})
+         ORDER BY ae.timestamp ASC`
+      ).all(...ips)
+    : [];
+
+  res.json({ events, related: { by_ip: byIp, by_font: byFont, by_webgl: byWebgl }, account_timeline: accountTimeline });
 });
 
 module.exports = router;

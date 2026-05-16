@@ -7,6 +7,7 @@ const NAV = [
   { to: '/anomalies', icon: '⚡', label: 'Anomalies' },
   { to: '/graph',     icon: '⬡', label: 'Graph' },
   { to: '/clusters',  icon: '◉', label: 'Clusters' },
+  { to: '/api-docs',  icon: '⟨⟩', label: 'API Docs' },
 ];
 
 export default function Sidebar() {
