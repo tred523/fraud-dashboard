@@ -48,6 +48,20 @@ function calculateVerdict(events, behavior, payment) {
   signals.shared_payment = hasSharedPayment;
   if (hasSharedPayment) { score += 15; reasons.push('Payment method shared with other accounts'); }
 
+  const hasPrepaidVirtual = (payment?.methods || []).some(m => m.is_prepaid || m.is_virtual);
+  signals.prepaid_or_virtual_card = hasPrepaidVirtual;
+  if (hasPrepaidVirtual) { score += 15; reasons.push('Prepaid or virtual card used'); }
+
+  const ipCountries = [...new Set(events.map(e => e.country_code).filter(Boolean))];
+  const cardCountries = [...new Set((payment?.methods || []).map(m => m.country).filter(Boolean))];
+  const hasCountryMismatch = ipCountries.length > 0 && cardCountries.length > 0 &&
+    cardCountries.some(cc => !ipCountries.includes(cc));
+  signals.card_country_mismatch = hasCountryMismatch;
+  if (hasCountryMismatch) {
+    score += 20;
+    reasons.push(`Card country (${cardCountries.join('/')}) doesn't match IP country (${ipCountries.join('/')})`);
+  }
+
   // Rapid IP changes (< 2 minutes between events with different IPs)
   const sorted = [...events].sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
   let rapidIpChange = false;

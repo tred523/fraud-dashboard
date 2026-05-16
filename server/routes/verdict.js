@@ -4,16 +4,16 @@ const { calculateVerdict } = require('../verdict');
 
 const router = express.Router();
 
-async function getPaymentShared(db, events) {
+async function getPaymentData(db, events) {
   const ips = [...new Set(events.map(e => e.ip_address).filter(Boolean))];
-  if (ips.length === 0) return false;
+  if (ips.length === 0) return { is_shared: false, methods: [] };
 
   const ph = ips.map(() => '?').join(',');
   const linkedAccountIds = [...new Set(
     (await db.all(`SELECT DISTINCT account_id FROM account_events WHERE ip_address IN (${ph})`, ips))
       .map(r => r.account_id)
   )];
-  if (linkedAccountIds.length === 0) return false;
+  if (linkedAccountIds.length === 0) return { is_shared: false, methods: [] };
 
   const phAcc = linkedAccountIds.map(() => '?').join(',');
   const signals = await db.all(
@@ -21,7 +21,15 @@ async function getPaymentShared(db, events) {
     linkedAccountIds
   );
 
+  const seen = new Set();
+  const methods = [];
+  let is_shared = false;
+
   for (const sig of signals) {
+    const key = sig.paypal_email ? `paypal:${sig.paypal_email}` : `card:${sig.card_bin}:${sig.card_last4}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+
     let linked = [];
     if (sig.paypal_email) {
       linked = await db.all(
@@ -34,9 +42,15 @@ async function getPaymentShared(db, events) {
         [sig.card_last4, sig.card_bin, sig.account_id]
       );
     }
-    if (linked.length > 0) return true;
+    if (linked.length > 0) is_shared = true;
+    methods.push({
+      is_prepaid: !!sig.is_prepaid,
+      is_virtual: !!sig.is_virtual,
+      country: sig.country || null,
+    });
   }
-  return false;
+
+  return { is_shared, methods };
 }
 
 // Batch verdicts — must be registered before /:visitorId
@@ -89,8 +103,8 @@ router.get('/:visitorId', async (req, res) => {
     [visitorId]
   );
 
-  const isShared = await getPaymentShared(db, events);
-  const verdict = calculateVerdict(events, behavior, { is_shared: isShared });
+  const paymentData = await getPaymentData(db, events);
+  const verdict = calculateVerdict(events, behavior, paymentData);
 
   res.json({ visitor_id: visitorId, ...verdict });
 });

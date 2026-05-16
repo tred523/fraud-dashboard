@@ -129,6 +129,32 @@ async function initDb() {
       card_last4 TEXT,
       card_bin TEXT,
       paypal_email TEXT,
+      bank_name TEXT,
+      card_type TEXT,
+      card_brand TEXT,
+      country TEXT,
+      is_prepaid INTEGER DEFAULT 0,
+      is_virtual INTEGER DEFAULT 0,
+      created_at BIGINT NOT NULL
+    )
+  `);
+
+  await pool.query(`ALTER TABLE payment_signals ADD COLUMN IF NOT EXISTS bank_name TEXT`);
+  await pool.query(`ALTER TABLE payment_signals ADD COLUMN IF NOT EXISTS card_type TEXT`);
+  await pool.query(`ALTER TABLE payment_signals ADD COLUMN IF NOT EXISTS card_brand TEXT`);
+  await pool.query(`ALTER TABLE payment_signals ADD COLUMN IF NOT EXISTS country TEXT`);
+  await pool.query(`ALTER TABLE payment_signals ADD COLUMN IF NOT EXISTS is_prepaid INTEGER DEFAULT 0`);
+  await pool.query(`ALTER TABLE payment_signals ADD COLUMN IF NOT EXISTS is_virtual INTEGER DEFAULT 0`);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS bin_cache (
+      bin TEXT PRIMARY KEY,
+      bank_name TEXT,
+      card_type TEXT,
+      card_brand TEXT,
+      country TEXT,
+      is_prepaid INTEGER DEFAULT 0,
+      is_virtual INTEGER DEFAULT 0,
       created_at BIGINT NOT NULL
     )
   `);

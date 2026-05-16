@@ -1,0 +1,70 @@
+const axios = require('axios');
+const { getDb } = require('./db');
+
+const CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+
+async function lookupBin(bin) {
+  if (!bin || String(bin).length < 6) return null;
+  const b = String(bin).substring(0, 6).replace(/\D/g, '');
+  if (b.length < 6) return null;
+
+  const db = getDb();
+
+  const cached = await db.get('SELECT * FROM bin_cache WHERE bin = ?', [b]);
+  if (cached && Date.now() - Number(cached.created_at) < CACHE_TTL_MS) {
+    return {
+      bank_name: cached.bank_name,
+      card_type: cached.card_type,
+      card_brand: cached.card_brand,
+      country: cached.country,
+      is_prepaid: !!cached.is_prepaid,
+      is_virtual: !!cached.is_virtual,
+    };
+  }
+
+  try {
+    const { data } = await axios.get(`https://lookup.binlist.net/${b}`, {
+      headers: { 'Accept-Version': '3' },
+      timeout: 4000,
+    });
+
+    const result = {
+      bank_name: data.bank?.name || null,
+      card_type: data.type || null,
+      card_brand: data.scheme || null,
+      country: data.country?.alpha2 || null,
+      is_prepaid: data.prepaid === true,
+      is_virtual: data.type === 'virtual',
+    };
+
+    const params = [
+      b, result.bank_name, result.card_type, result.card_brand, result.country,
+      result.is_prepaid ? 1 : 0, result.is_virtual ? 1 : 0, Date.now(),
+    ];
+
+    if (db.isPostgres) {
+      await db.run(
+        `INSERT INTO bin_cache (bin, bank_name, card_type, card_brand, country, is_prepaid, is_virtual, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+         ON CONFLICT (bin) DO UPDATE SET
+           bank_name=EXCLUDED.bank_name, card_type=EXCLUDED.card_type,
+           card_brand=EXCLUDED.card_brand, country=EXCLUDED.country,
+           is_prepaid=EXCLUDED.is_prepaid, is_virtual=EXCLUDED.is_virtual,
+           created_at=EXCLUDED.created_at`,
+        params
+      );
+    } else {
+      await db.run(
+        `INSERT OR REPLACE INTO bin_cache (bin, bank_name, card_type, card_brand, country, is_prepaid, is_virtual, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        params
+      );
+    }
+
+    return result;
+  } catch {
+    return null;
+  }
+}
+
+module.exports = { lookupBin };

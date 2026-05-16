@@ -1,0 +1,27 @@
+Add BIN lookup for payment card analysis.
+
+1. Install axios package: npm install axios
+
+2. Create server/bin-lookup.js that:
+- Uses free BIN lookup API: https://lookup.binlist.net/{bin}
+- Caches results in SQLite/PostgreSQL table: bin_cache (bin, bank_name, card_type, card_brand, country, is_prepaid, is_virtual, created_at)
+- Returns: { bank_name, card_type (debit/credit), card_brand (Visa/MC), country, is_prepaid, is_virtual }
+- Falls back gracefully if API is unavailable
+
+3. Update POST /api/ingest payment handler to:
+- Extract BIN from card_bin field
+- Call bin lookup
+- Store enriched card info in payment_signals table
+- Flag is_prepaid and is_virtual cards as higher risk
+
+4. Add card risk signals to verdict system:
+- prepaid/virtual card → +15 to verdict score
+- card country mismatch with IP country → +20 to verdict score
+
+5. Update Visitor Detail Payment section to show:
+- Card brand icon (Visa/MC/Amex)
+- Bank name
+- Card type (Debit/Credit/Prepaid/Virtual)
+- Country flag
+- Risk indicator for prepaid/virtual cards
+- "SHARED" badge if multiple accounts use same card

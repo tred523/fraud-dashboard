@@ -26,6 +26,32 @@ function fmt(ts) {
   });
 }
 
+const CARD_BRAND_STYLES = {
+  visa:       { bg: '#1A1F71', color: '#fff', label: 'VISA' },
+  mastercard: { bg: '#EB001B', color: '#fff', label: 'MC' },
+  amex:       { bg: '#2E77BC', color: '#fff', label: 'AMEX' },
+  discover:   { bg: '#FF6600', color: '#fff', label: 'DISC' },
+};
+
+function CardBrandIcon({ brand }) {
+  const key = (brand || '').toLowerCase();
+  const s = CARD_BRAND_STYLES[key] || { bg: 'var(--border2)', color: 'var(--text3)', label: (brand || '?').toUpperCase().slice(0, 4) };
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+      width: 36, height: 20, borderRadius: 3, background: s.bg, color: s.color,
+      fontSize: 8, fontWeight: 800, letterSpacing: 0.5, flexShrink: 0,
+    }}>
+      {s.label}
+    </span>
+  );
+}
+
+function countryFlag(code) {
+  if (!code || code.length !== 2) return '';
+  return [...code.toUpperCase()].map(c => String.fromCodePoint(c.charCodeAt(0) - 65 + 0x1F1E6)).join('');
+}
+
 function FpItem({ label, value }) {
   if (!value && value !== 0) return null;
   return (
@@ -500,35 +526,67 @@ export default function VisitorDetail() {
                 )}
               </div>
               <div style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {payment.methods.map((method) => (
-                  <div key={method.id} style={{
-                    padding: '10px 12px', background: 'var(--sidebar)', borderRadius: 6,
-                    border: `1px solid ${method.linked_accounts.length > 0 ? '#ef444444' : 'var(--border)'}`,
-                  }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: method.linked_accounts.length > 0 ? 6 : 0 }}>
-                      <span style={{ fontSize: 16 }}>{method.paypal_email ? '🅿️' : '💳'}</span>
-                      <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text1)', fontFamily: 'monospace' }}>
-                        {method.paypal_email ? method.paypal_email : `•••• •••• •••• ${method.card_last4}`}
-                      </span>
-                      {method.card_bin && (
-                        <span style={{ fontSize: 11, color: 'var(--text3)' }}>BIN: {method.card_bin}</span>
-                      )}
-                      {method.linked_accounts.length > 0 && (
-                        <span style={{
-                          marginLeft: 'auto', fontSize: 10, fontWeight: 700, padding: '2px 6px',
-                          borderRadius: 3, background: '#ef444422', color: '#ef4444', whiteSpace: 'nowrap',
-                        }}>
-                          {method.linked_accounts.length} other account{method.linked_accounts.length !== 1 ? 's' : ''}
+                {payment.methods.map((method) => {
+                  const isRisky = method.is_prepaid || method.is_virtual;
+                  const isLinked = method.linked_accounts.length > 0;
+                  const borderColor = isLinked ? '#ef444444' : isRisky ? '#f9731644' : 'var(--border)';
+                  const cardTypeLabel = method.is_virtual ? 'Virtual'
+                    : method.is_prepaid ? 'Prepaid'
+                    : method.card_type ? (method.card_type.charAt(0).toUpperCase() + method.card_type.slice(1))
+                    : null;
+
+                  return (
+                    <div key={method.id} style={{
+                      padding: '10px 12px', background: 'var(--sidebar)', borderRadius: 6,
+                      border: `1px solid ${borderColor}`,
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: (isLinked || method.bank_name) ? 6 : 0 }}>
+                        {method.paypal_email ? (
+                          <span style={{ fontSize: 16 }}>🅿️</span>
+                        ) : (
+                          <CardBrandIcon brand={method.card_brand} />
+                        )}
+                        <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text1)', fontFamily: 'monospace' }}>
+                          {method.paypal_email ? method.paypal_email : `•••• •••• •••• ${method.card_last4}`}
                         </span>
+                        {method.country && (
+                          <span title={method.country} style={{ fontSize: 16, lineHeight: 1 }}>
+                            {countryFlag(method.country)}
+                          </span>
+                        )}
+                        {cardTypeLabel && (
+                          <span style={{
+                            fontSize: 10, fontWeight: 700, padding: '1px 5px', borderRadius: 3,
+                            background: isRisky ? '#f9731622' : 'var(--border2)',
+                            color: isRisky ? '#f97316' : 'var(--text3)',
+                          }}>
+                            {cardTypeLabel}
+                          </span>
+                        )}
+                        {isLinked && (
+                          <span style={{
+                            marginLeft: 'auto', fontSize: 10, fontWeight: 700, padding: '2px 6px',
+                            borderRadius: 3, background: '#ef444422', color: '#ef4444', whiteSpace: 'nowrap',
+                          }}>
+                            {method.linked_accounts.length} other account{method.linked_accounts.length !== 1 ? 's' : ''}
+                          </span>
+                        )}
+                      </div>
+                      {(method.bank_name || isLinked) && (
+                        <div style={{ fontSize: 11, color: 'var(--text3)', paddingLeft: 44, display: 'flex', flexDirection: 'column', gap: 3 }}>
+                          {method.bank_name && (
+                            <span>{method.bank_name}</span>
+                          )}
+                          {isLinked && (
+                            <span>
+                              Also used by: <span style={{ color: '#ef4444', fontFamily: 'monospace' }}>{method.linked_accounts.join(', ')}</span>
+                            </span>
+                          )}
+                        </div>
                       )}
                     </div>
-                    {method.linked_accounts.length > 0 && (
-                      <div style={{ fontSize: 11, color: 'var(--text3)', paddingLeft: 24 }}>
-                        Also used by: <span style={{ color: '#ef4444', fontFamily: 'monospace' }}>{method.linked_accounts.join(', ')}</span>
-                      </div>
-                    )}
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}

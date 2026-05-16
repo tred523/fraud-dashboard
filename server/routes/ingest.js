@@ -1,5 +1,6 @@
 const express = require('express');
 const { getDb } = require('../db');
+const { lookupBin } = require('../bin-lookup');
 
 const router = express.Router();
 
@@ -34,10 +35,19 @@ router.post('/', async (req, res) => {
   if (event_type === 'payment' && metadata) {
     const { card_last4, card_bin, paypal_email } = metadata;
     if (card_last4 || paypal_email) {
+      let binInfo = null;
+      if (card_bin) binInfo = await lookupBin(card_bin);
+
+      const isPrepaid = binInfo?.is_prepaid ? 1 : 0;
+      const isVirtual = binInfo?.is_virtual ? 1 : 0;
+
       await db.run(
-        `INSERT INTO payment_signals (account_id, card_last4, card_bin, paypal_email, created_at)
-         VALUES (?, ?, ?, ?, ?)`,
-        [account_id, card_last4 || null, card_bin || null, paypal_email || null, ts]
+        `INSERT INTO payment_signals
+           (account_id, card_last4, card_bin, paypal_email, bank_name, card_type, card_brand, country, is_prepaid, is_virtual, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [account_id, card_last4 || null, card_bin || null, paypal_email || null,
+         binInfo?.bank_name || null, binInfo?.card_type || null, binInfo?.card_brand || null,
+         binInfo?.country || null, isPrepaid, isVirtual, ts]
       );
     }
   }

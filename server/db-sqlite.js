@@ -119,6 +119,32 @@ function initDb() {
       card_last4 TEXT,
       card_bin TEXT,
       paypal_email TEXT,
+      bank_name TEXT,
+      card_type TEXT,
+      card_brand TEXT,
+      country TEXT,
+      is_prepaid INTEGER DEFAULT 0,
+      is_virtual INTEGER DEFAULT 0,
+      created_at INTEGER NOT NULL
+    )
+  `);
+
+  try { raw.exec('ALTER TABLE payment_signals ADD COLUMN bank_name TEXT'); } catch (_) {}
+  try { raw.exec('ALTER TABLE payment_signals ADD COLUMN card_type TEXT'); } catch (_) {}
+  try { raw.exec('ALTER TABLE payment_signals ADD COLUMN card_brand TEXT'); } catch (_) {}
+  try { raw.exec('ALTER TABLE payment_signals ADD COLUMN country TEXT'); } catch (_) {}
+  try { raw.exec('ALTER TABLE payment_signals ADD COLUMN is_prepaid INTEGER DEFAULT 0'); } catch (_) {}
+  try { raw.exec('ALTER TABLE payment_signals ADD COLUMN is_virtual INTEGER DEFAULT 0'); } catch (_) {}
+
+  raw.exec(`
+    CREATE TABLE IF NOT EXISTS bin_cache (
+      bin TEXT PRIMARY KEY,
+      bank_name TEXT,
+      card_type TEXT,
+      card_brand TEXT,
+      country TEXT,
+      is_prepaid INTEGER DEFAULT 0,
+      is_virtual INTEGER DEFAULT 0,
       created_at INTEGER NOT NULL
     )
   `);
