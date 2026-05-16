@@ -1,0 +1,8 @@
+Fix the import/upload parser in server/routes/upload.js. The error is "Parse failed: Provided value cannot be bound to SQLite parameter 3". 
+
+The issue is that some fields have unexpected types:
+- color_depth can be 32 (integer, not just 24)
+- languages is nested array [[\"de-DE\"]] not just [\"de\"]
+- Some numeric fields might be null or undefined
+
+Fix the parser to handle all these edge cases gracefully - cast all numeric fields to integers, handle nested arrays for languages, and skip null/undefined optional fields instead of failing.
