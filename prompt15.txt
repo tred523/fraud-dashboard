@@ -1,0 +1,8 @@
+Fix PAYMENT_SHARING anomaly detection. Two test events were sent via /api/ingest with account_id "user_001" and "user_002" both using card_last4 "4242" and card_bin "424242". But no PAYMENT_SHARING anomaly appears in the Anomalies page.
+
+Debug and fix:
+1. Check server/anomalies.js - find the PAYMENT_SHARING detection logic
+2. Make sure it queries the payment_signals table correctly
+3. The detection should find any two different account_ids that share the same card_last4 + card_bin combination
+4. Add console.log to debug what data is being found
+5. Make sure the anomaly is included in the /api/anomalies response

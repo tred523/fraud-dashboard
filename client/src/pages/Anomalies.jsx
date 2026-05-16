@@ -9,6 +9,7 @@ const TYPE_META = {
   RAPID_IP_CHANGE:          { label: 'Rapid IP Change',      icon: '⚡', color: '#f87171' },
   VM_MACINTEL_CONTRADICTION:{ label: 'VM/MacIntel Contradiction', icon: '⚠️', color: '#fb923c' },
   ANTI_DETECT_CLUSTER:      { label: 'Anti-Detect Cluster',  icon: '🎭', color: '#fbbf24' },
+  PAYMENT_SHARING:          { label: 'Payment Sharing',      icon: '💳', color: '#f472b6' },
 };
 
 export default function Anomalies() {
@@ -30,7 +31,7 @@ export default function Anomalies() {
     return acc;
   }, {});
 
-  const typeOrder = ['RAPID_IP_CHANGE', 'VM_MACINTEL_CONTRADICTION', 'ANTI_DETECT_CLUSTER', 'IP_SHARING', 'FONT_HASH_CLUSTER', 'WEBGL_CLUSTER'];
+  const typeOrder = ['RAPID_IP_CHANGE', 'VM_MACINTEL_CONTRADICTION', 'ANTI_DETECT_CLUSTER', 'PAYMENT_SHARING', 'IP_SHARING', 'FONT_HASH_CLUSTER', 'WEBGL_CLUSTER'];
 
   return (
     <div className="page">

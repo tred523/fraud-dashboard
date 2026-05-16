@@ -195,6 +195,9 @@ function detectAnomalies(db) {
   }
 
   // g) Payment Sharing (card)
+  const allPayments = db.prepare('SELECT * FROM payment_signals').all();
+  console.log('[PAYMENT_SHARING] payment_signals rows:', allPayments.length, allPayments);
+
   const cardSharing = db.prepare(`
     SELECT card_last4, card_bin,
            GROUP_CONCAT(DISTINCT account_id) as account_ids,
@@ -202,9 +205,10 @@ function detectAnomalies(db) {
     FROM payment_signals
     WHERE card_last4 IS NOT NULL AND card_bin IS NOT NULL
     GROUP BY card_last4, card_bin
-    HAVING cnt > 1
+    HAVING COUNT(DISTINCT account_id) > 1
     ORDER BY cnt DESC
   `).all();
+  console.log('[PAYMENT_SHARING] card sharing matches:', cardSharing);
 
   for (const row of cardSharing) {
     anomalies.push({
@@ -226,9 +230,10 @@ function detectAnomalies(db) {
     FROM payment_signals
     WHERE paypal_email IS NOT NULL AND paypal_email != ''
     GROUP BY paypal_email
-    HAVING cnt > 1
+    HAVING COUNT(DISTINCT account_id) > 1
     ORDER BY cnt DESC
   `).all();
+  console.log('[PAYMENT_SHARING] paypal sharing matches:', paypalSharing);
 
   for (const row of paypalSharing) {
     anomalies.push({
