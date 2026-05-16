@@ -1,0 +1,17 @@
+Migrate the database from SQLite to PostgreSQL for Railway deployment.
+
+1. Add pg package: npm install pg
+2. Create server/db-postgres.js that:
+   - Connects using process.env.DATABASE_URL
+   - Has the same interface as db.js (all the same table creation queries)
+   - Creates all tables: events, anomalies, api_keys, account_events, payment_signals, behavior_events
+   - Pre-inserts the demo API key "demo_key_12345"
+   - Pre-inserts the 7 sample events as seed data
+
+3. Update server/index.js to use db-postgres.js when DATABASE_URL env variable exists, otherwise fall back to SQLite (for local development)
+
+4. Update all server/routes/*.js files to use the correct db module
+
+5. Make sure all SQL queries are compatible with both SQLite and PostgreSQL (use $1, $2 params for postgres, ? for sqlite)
+
+6. Add DATABASE_URL to .env.example

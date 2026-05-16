@@ -27,6 +27,7 @@ if (process.env.NODE_ENV === 'production') {
   app.get('*', (_req, res) => res.sendFile(path.join(dist, 'index.html')));
 }
 
-initDb();
-
-app.listen(PORT, () => console.log(`Fraud Dashboard API → http://localhost:${PORT}`));
+(async () => {
+  await initDb();
+  app.listen(PORT, () => console.log(`Fraud Dashboard API → http://localhost:${PORT}`));
+})();

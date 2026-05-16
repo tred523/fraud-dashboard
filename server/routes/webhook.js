@@ -64,7 +64,7 @@ function parseFpWebhook(payload) {
   };
 }
 
-router.post('/fingerprint', (req, res) => {
+router.post('/fingerprint', async (req, res) => {
   const rawBody  = req.body;
   const secret   = process.env.FPJS_SECRET_KEY;
   const signature = req.headers['fpjs-event-signature'];
@@ -84,7 +84,7 @@ router.post('/fingerprint', (req, res) => {
 
   try {
     const normalized = parseFpWebhook(payload);
-    insertEvents([normalized]);
+    await insertEvents([normalized]);
     setLastWebhookTime();
     res.json({ ok: true });
   } catch (err) {

@@ -1,0 +1,181 @@
+const { Pool } = require('pg');
+const { parseEvent } = require('./parseEvent');
+const { SAMPLE_DATA } = require('./sampleData');
+
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+});
+
+function toPositional(sql) {
+  let i = 0;
+  return sql.replace(/\?/g, () => `$${++i}`);
+}
+
+function getDb() {
+  return {
+    async all(sql, params = []) {
+      const { rows } = await pool.query(toPositional(sql), params);
+      return rows;
+    },
+    async get(sql, params = []) {
+      const { rows } = await pool.query(toPositional(sql), params);
+      return rows[0] || null;
+    },
+    async run(sql, params = []) {
+      await pool.query(toPositional(sql), params);
+    },
+    async exec(sql) {
+      await pool.query(sql);
+    },
+    groupConcat(col) {
+      return `STRING_AGG(DISTINCT ${col}, ',')`;
+    },
+    isPostgres: true,
+  };
+}
+
+async function initDb() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS events (
+      id SERIAL PRIMARY KEY,
+      event_id TEXT UNIQUE,
+      timestamp BIGINT,
+      visitor_id TEXT,
+      visitor_found INTEGER DEFAULT 1,
+      first_seen_at BIGINT,
+      last_seen_at BIGINT,
+      ip_address TEXT,
+      browser_name TEXT,
+      os TEXT,
+      device TEXT,
+      bot TEXT,
+      suspect_score REAL DEFAULT 0,
+      tampering INTEGER DEFAULT 0,
+      tampering_ml_score REAL DEFAULT 0,
+      anti_detect_browser INTEGER DEFAULT 0,
+      anomaly_score REAL DEFAULT 0,
+      vpn INTEGER DEFAULT 0,
+      proxy INTEGER DEFAULT 0,
+      incognito INTEGER DEFAULT 0,
+      virtual_machine INTEGER DEFAULT 0,
+      virtual_machine_ml_score REAL DEFAULT 0,
+      city_name TEXT,
+      country_code TEXT,
+      asn_name TEXT,
+      velocity_distinct_ip_24h INTEGER DEFAULT 0,
+      velocity_events_24h INTEGER DEFAULT 0,
+      font_hash TEXT,
+      webgl_renderer_unmasked TEXT,
+      hardware_concurrency INTEGER,
+      device_memory INTEGER,
+      platform TEXT,
+      confidence_score REAL,
+      risk_score INTEGER DEFAULT 0,
+      risk_level TEXT DEFAULT 'CLEAN',
+      bot_probability REAL DEFAULT NULL
+    )
+  `);
+
+  await pool.query(`ALTER TABLE events ADD COLUMN IF NOT EXISTS bot_probability REAL DEFAULT NULL`);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS behavior_events (
+      id SERIAL PRIMARY KEY,
+      visitor_id TEXT,
+      account_id TEXT,
+      api_key_id INTEGER,
+      session_duration INTEGER,
+      mouse_move_count INTEGER DEFAULT 0,
+      click_count INTEGER DEFAULT 0,
+      keyboard_event_count INTEGER DEFAULT 0,
+      scroll_direction_changes INTEGER DEFAULT 0,
+      backspace_count INTEGER DEFAULT 0,
+      mouse_smoothness_score REAL DEFAULT 50,
+      typing_rhythm_score REAL DEFAULT 50,
+      bot_probability REAL DEFAULT 0,
+      page_timeline TEXT,
+      form_interactions TEXT,
+      collected_at BIGINT NOT NULL
+    )
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS api_keys (
+      id SERIAL PRIMARY KEY,
+      key TEXT UNIQUE NOT NULL,
+      client_name TEXT NOT NULL,
+      created_at BIGINT NOT NULL
+    )
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS account_events (
+      id SERIAL PRIMARY KEY,
+      account_id TEXT NOT NULL,
+      event_type TEXT NOT NULL,
+      timestamp BIGINT NOT NULL,
+      ip_address TEXT,
+      user_agent TEXT,
+      metadata TEXT,
+      api_key_id INTEGER NOT NULL
+    )
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS payment_signals (
+      id SERIAL PRIMARY KEY,
+      account_id TEXT NOT NULL,
+      card_last4 TEXT,
+      card_bin TEXT,
+      paypal_email TEXT,
+      created_at BIGINT NOT NULL
+    )
+  `);
+
+  await pool.query(
+    `INSERT INTO api_keys (key, client_name, created_at) VALUES ('demo_key_12345', 'Demo Client', $1) ON CONFLICT (key) DO NOTHING`,
+    [Date.now()]
+  );
+
+  const { rows } = await pool.query('SELECT COUNT(*) as c FROM events');
+  if (parseInt(rows[0].c, 10) === 0) await insertEvents(SAMPLE_DATA);
+}
+
+const EVENT_COLS = [
+  'event_id', 'timestamp', 'visitor_id', 'visitor_found', 'first_seen_at', 'last_seen_at',
+  'ip_address', 'browser_name', 'os', 'device', 'bot', 'suspect_score', 'tampering',
+  'tampering_ml_score', 'anti_detect_browser', 'anomaly_score', 'vpn', 'proxy', 'incognito',
+  'virtual_machine', 'virtual_machine_ml_score', 'city_name', 'country_code', 'asn_name',
+  'velocity_distinct_ip_24h', 'velocity_events_24h', 'font_hash', 'webgl_renderer_unmasked',
+  'hardware_concurrency', 'device_memory', 'platform', 'confidence_score', 'risk_score', 'risk_level',
+];
+
+async function insertEvents(events) {
+  const client = await pool.connect();
+  const placeholders = EVENT_COLS.map((_, i) => `$${i + 1}`).join(', ');
+  const sql = `
+    INSERT INTO events (${EVENT_COLS.join(', ')})
+    VALUES (${placeholders})
+    ON CONFLICT (event_id) DO NOTHING
+  `;
+  try {
+    await client.query('BEGIN');
+    for (const ev of events) {
+      const parsed = parseEvent(ev);
+      await client.query(sql, EVENT_COLS.map(c => parsed[c] ?? null));
+    }
+    await client.query('COMMIT');
+  } catch (e) {
+    await client.query('ROLLBACK');
+    throw e;
+  } finally {
+    client.release();
+  }
+}
+
+let lastWebhookReceivedAt = null;
+function setLastWebhookTime() { lastWebhookReceivedAt = Date.now(); }
+function getLastWebhookTime() { return lastWebhookReceivedAt; }
+
+module.exports = { getDb, initDb, insertEvents, setLastWebhookTime, getLastWebhookTime };

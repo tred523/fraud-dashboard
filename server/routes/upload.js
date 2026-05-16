@@ -5,7 +5,7 @@ const { insertEvents } = require('../db');
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 * 1024 * 1024 } });
 
-router.post('/', upload.single('file'), (req, res) => {
+router.post('/', upload.single('file'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file provided' });
 
   try {
@@ -23,7 +23,7 @@ router.post('/', upload.single('file'), (req, res) => {
         .map(l => JSON.parse(l));
     }
 
-    insertEvents(events);
+    await insertEvents(events);
     res.json({ success: true, imported: events.length });
   } catch (err) {
     res.status(400).json({ error: `Parse failed: ${err.message}` });

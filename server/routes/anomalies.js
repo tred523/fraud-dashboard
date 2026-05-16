@@ -4,9 +4,9 @@ const { detectAnomalies } = require('../anomalies');
 
 const router = express.Router();
 
-router.get('/', (_req, res) => {
+router.get('/', async (_req, res) => {
   const db = getDb();
-  res.json(detectAnomalies(db));
+  res.json(await detectAnomalies(db));
 });
 
 module.exports = router;

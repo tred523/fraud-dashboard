@@ -3,37 +3,37 @@ const { getDb } = require('../db');
 
 const router = express.Router();
 
-router.get('/', (_req, res) => {
+router.get('/', async (_req, res) => {
   const db = getDb();
 
-  const nodes = db.prepare(`
+  const nodes = await db.all(`
     SELECT visitor_id, risk_level, COUNT(*) as event_count
     FROM events
-    GROUP BY visitor_id
-  `).all();
+    GROUP BY visitor_id, risk_level
+  `);
 
-  const ipLinks = db.prepare(`
+  const ipLinks = (await db.all(`
     SELECT DISTINCT a.visitor_id as source, b.visitor_id as target
     FROM events a
     JOIN events b ON a.ip_address = b.ip_address AND a.visitor_id < b.visitor_id
     WHERE a.ip_address IS NOT NULL AND a.ip_address != ''
-  `).all().map(l => ({ ...l, type: 'IP' }));
+  `)).map(l => ({ ...l, type: 'IP' }));
 
-  const fontLinks = db.prepare(`
+  const fontLinks = (await db.all(`
     SELECT DISTINCT a.visitor_id as source, b.visitor_id as target
     FROM events a
     JOIN events b ON a.font_hash = b.font_hash AND a.visitor_id < b.visitor_id
     WHERE a.font_hash IS NOT NULL AND a.font_hash != ''
-  `).all().map(l => ({ ...l, type: 'Font' }));
+  `)).map(l => ({ ...l, type: 'Font' }));
 
-  const gpuLinks = db.prepare(`
+  const gpuLinks = (await db.all(`
     SELECT DISTINCT a.visitor_id as source, b.visitor_id as target
     FROM events a
     JOIN events b ON a.webgl_renderer_unmasked = b.webgl_renderer_unmasked AND a.visitor_id < b.visitor_id
     WHERE a.webgl_renderer_unmasked IS NOT NULL AND a.webgl_renderer_unmasked != ''
-  `).all().map(l => ({ ...l, type: 'GPU' }));
+  `)).map(l => ({ ...l, type: 'GPU' }));
 
-  const paymentLinks = db.prepare(`
+  const paymentLinks = (await db.all(`
     SELECT DISTINCT
       CASE WHEN a.visitor_id < b.visitor_id THEN a.visitor_id ELSE b.visitor_id END as source,
       CASE WHEN a.visitor_id < b.visitor_id THEN b.visitor_id ELSE a.visitor_id END as target
@@ -48,13 +48,13 @@ router.get('/', (_req, res) => {
     JOIN events a ON a.ip_address = ae1.ip_address
     JOIN events b ON b.ip_address = ae2.ip_address
     WHERE a.visitor_id != b.visitor_id
-  `).all().map(l => ({ ...l, type: 'Payment' }));
+  `)).map(l => ({ ...l, type: 'Payment' }));
 
   res.json({
     nodes: nodes.map(n => ({
       id: n.visitor_id,
       riskLevel: n.risk_level,
-      eventCount: n.event_count,
+      eventCount: parseInt(n.event_count, 10),
     })),
     links: [...ipLinks, ...fontLinks, ...gpuLinks, ...paymentLinks],
   });
