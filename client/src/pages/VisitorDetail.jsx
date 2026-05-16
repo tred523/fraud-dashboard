@@ -233,7 +233,7 @@ export default function VisitorDetail() {
   if (error)   return <div className="page"><div className="empty-state"><div className="empty-icon">⚠️</div><div className="empty-text">{error}</div></div></div>;
   if (!data)   return null;
 
-  const { events, related, account_timeline, behavior, payment } = data;
+  const { events, related, account_timeline, behavior, payment, linked_payments } = data;
   const latest = events[events.length - 1];
   const maxRiskLevel = events.reduce((m, e) => {
     const order = { CLEAN: 0, LOW: 1, SUSPICIOUS: 2, 'HIGH RISK': 3 };
@@ -258,6 +258,17 @@ export default function VisitorDetail() {
       return acc;
     }, {})
   );
+
+  const sharedCardKeysSet = (() => {
+    const cardAccounts = {};
+    for (const p of (linked_payments || [])) {
+      if (!p.card_last4 || !p.card_bin) continue;
+      const key = `${p.card_bin}:${p.card_last4}`;
+      if (!cardAccounts[key]) cardAccounts[key] = new Set();
+      cardAccounts[key].add(p.account_id);
+    }
+    return new Set(Object.entries(cardAccounts).filter(([, s]) => s.size > 1).map(([k]) => k));
+  })();
 
   return (
     <div className="page">
@@ -423,7 +434,7 @@ export default function VisitorDetail() {
 
           {/* Account Activity Timeline */}
           {account_timeline && account_timeline.length > 0 && (
-            <div className="card">
+            <div className="card" style={{ marginBottom: 20 }}>
               <div className="card-header">
                 <span className="card-title">Account Activity</span>
                 <span style={{ fontSize: 12, color: 'var(--text3)' }}>{account_timeline.length} action{account_timeline.length !== 1 ? 's' : ''} via shared IP</span>
@@ -457,6 +468,65 @@ export default function VisitorDetail() {
               </div>
             </div>
           )}
+
+          {/* Linked Payments */}
+          <div className="card">
+            <div className="card-header">
+              <span className="card-title">Linked Payments</span>
+              <span style={{ fontSize: 12, color: 'var(--text3)' }}>via shared IP</span>
+            </div>
+            {(!linked_payments || linked_payments.length === 0) ? (
+              <div style={{ padding: '20px 16px', fontSize: 13, color: 'var(--text3)' }}>No payment data available</div>
+            ) : (
+              <div className="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Account ID</th>
+                      <th>Card</th>
+                      <th>Bank</th>
+                      <th>Type</th>
+                      <th>Date</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {linked_payments.map((p, i) => {
+                      const isRisky = p.is_prepaid || p.is_virtual;
+                      const isShared = p.card_last4 && p.card_bin && sharedCardKeysSet.has(`${p.card_bin}:${p.card_last4}`);
+                      const cardTypeLabel = p.is_virtual ? 'Virtual' : p.is_prepaid ? 'Prepaid' : p.card_type
+                        ? p.card_type.charAt(0).toUpperCase() + p.card_type.slice(1)
+                        : '—';
+                      return (
+                        <tr key={i}>
+                          <td className="mono" style={{ fontSize: 12 }}>{p.account_id}</td>
+                          <td style={{ fontFamily: 'monospace', fontSize: 12 }}>
+                            {p.card_last4 ? `•••• ${p.card_last4}` : '—'}
+                            {isShared && (
+                              <span style={{
+                                marginLeft: 6, fontSize: 9, fontWeight: 700, padding: '1px 4px',
+                                borderRadius: 3, background: '#ef444422', color: '#ef4444', verticalAlign: 'middle',
+                              }}>SHARED</span>
+                            )}
+                          </td>
+                          <td style={{ fontSize: 12, color: 'var(--text2)' }}>{p.bank_name || '—'}</td>
+                          <td>
+                            <span style={{
+                              fontSize: 10, fontWeight: 700, padding: '1px 5px', borderRadius: 3,
+                              background: isRisky ? '#f9731622' : 'var(--border2)',
+                              color: isRisky ? '#f97316' : 'var(--text3)',
+                            }}>
+                              {cardTypeLabel}
+                            </span>
+                          </td>
+                          <td style={{ fontSize: 12, color: 'var(--text3)', whiteSpace: 'nowrap' }}>{fmt(p.timestamp)}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Right column */}

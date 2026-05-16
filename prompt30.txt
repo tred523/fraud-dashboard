@@ -1,0 +1,13 @@
+Update Visitor Detail page to automatically show all payment methods linked via IP address.
+
+In server/routes/visitor.js for GET /api/visitor/:visitor_id:
+1. Get the visitor's IP address(es) from their events
+2. Query payment_signals table for all payments made from the same IP addresses
+3. For each payment found, get the account_id that made it
+4. Return this data in the visitor response as "linked_payments" array with: account_id, card_last4, card_bin, bank_name, card_type, is_prepaid, amount, timestamp
+
+In client/src/pages/VisitorDetail.jsx add a new "Linked Payments" section in the Overview tab:
+- Show table: Account ID | Card | Bank | Type | Amount | Date
+- If card is prepaid or virtual → show orange warning badge
+- If same card used by multiple accounts → show red "SHARED" badge
+- If no linked payments found → show "No payment data available"

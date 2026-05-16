@@ -53,6 +53,14 @@ router.get('/:visitorId', async (req, res) => {
       )]
     : [];
 
+  const linkedPayments = linkedAccountIds.length
+    ? await db.all(
+        `SELECT account_id, card_last4, card_bin, bank_name, card_type, is_prepaid, is_virtual, created_at as timestamp
+         FROM payment_signals WHERE account_id IN (${ph(linkedAccountIds)}) ORDER BY created_at DESC`,
+        linkedAccountIds
+      )
+    : [];
+
   let paymentData = { methods: [], is_shared: false };
   if (linkedAccountIds.length > 0) {
     const phAcc = linkedAccountIds.map(() => '?').join(',');
@@ -87,7 +95,7 @@ router.get('/:visitorId', async (req, res) => {
     paymentData = { methods, is_shared: methods.some(m => m.linked_accounts.length > 0) };
   }
 
-  res.json({ events, related: { by_ip: byIp, by_font: byFont, by_webgl: byWebgl }, account_timeline: accountTimeline, behavior, payment: paymentData });
+  res.json({ events, related: { by_ip: byIp, by_font: byFont, by_webgl: byWebgl }, account_timeline: accountTimeline, behavior, payment: paymentData, linked_payments: linkedPayments });
 });
 
 module.exports = router;
