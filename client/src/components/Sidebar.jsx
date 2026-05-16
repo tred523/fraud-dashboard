@@ -4,6 +4,7 @@ import UploadModal from './UploadModal';
 
 const NAV = [
   { to: '/',          icon: '◈', label: 'Overview' },
+  { to: '/accounts',  icon: '👤', label: 'Accounts' },
   { to: '/anomalies', icon: '⚡', label: 'Anomalies' },
   { to: '/graph',     icon: '⬡', label: 'Graph' },
   { to: '/clusters',  icon: '◉', label: 'Clusters' },

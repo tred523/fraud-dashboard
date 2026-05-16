@@ -3,6 +3,8 @@ import Sidebar from './components/Sidebar';
 import Overview from './pages/Overview';
 import VisitorDetail from './pages/VisitorDetail';
 import Anomalies from './pages/Anomalies';
+import Accounts from './pages/Accounts';
+import AccountDetail from './pages/AccountDetail';
 import Clusters from './pages/Clusters';
 import Graph from './pages/Graph';
 import ApiDocs from './pages/ApiDocs';
@@ -14,13 +16,15 @@ export default function App() {
         <Sidebar />
         <main className="main-content">
           <Routes>
-            <Route path="/"               element={<Overview />} />
-            <Route path="/visitor/:id"    element={<VisitorDetail />} />
-            <Route path="/anomalies"      element={<Anomalies />} />
-            <Route path="/graph"          element={<Graph />} />
-            <Route path="/clusters"       element={<Clusters />} />
-            <Route path="/api-docs"        element={<ApiDocs />} />
-            <Route path="*"               element={<Navigate to="/" replace />} />
+            <Route path="/"                        element={<Overview />} />
+            <Route path="/visitor/:id"             element={<VisitorDetail />} />
+            <Route path="/accounts"                element={<Accounts />} />
+            <Route path="/accounts/:account_id"    element={<AccountDetail />} />
+            <Route path="/anomalies"               element={<Anomalies />} />
+            <Route path="/graph"                   element={<Graph />} />
+            <Route path="/clusters"                element={<Clusters />} />
+            <Route path="/api-docs"                element={<ApiDocs />} />
+            <Route path="*"                        element={<Navigate to="/" replace />} />
           </Routes>
         </main>
       </div>

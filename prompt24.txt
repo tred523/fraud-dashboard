@@ -1,0 +1,23 @@
+Add an Accounts page to show all accounts that sent events via /api/ingest API.
+
+1. Create GET /api/accounts endpoint that returns:
+- List of unique account_ids from account_events table
+- For each account: account_id, total_events, last_seen, event_types used, linked visitor_ids (via matching IP), payment methods count, verdict
+
+2. Create client/src/pages/Accounts.jsx page showing:
+- Table with columns: Account ID, Last Seen, Events, Event Types (pills), Payment Methods, Linked Visitor, Verdict badge
+- Click row opens account detail
+
+3. Create GET /api/accounts/:account_id endpoint returning:
+- All events for this account chronologically
+- Payment methods used with BIN lookup info
+- Linked Fingerprint visitor_ids
+- Verdict based on all signals
+
+4. Add Accounts page to sidebar navigation between Overview and Anomalies
+
+5. Create client/src/pages/AccountDetail.jsx showing:
+- Account timeline
+- Payment methods with card details (bank, type, country, prepaid flag)
+- Linked visitors section
+- Verdict badge
