@@ -5,6 +5,7 @@ import VisitorDetail from './pages/VisitorDetail';
 import Anomalies from './pages/Anomalies';
 import Clusters from './pages/Clusters';
 import Graph from './pages/Graph';
+import ApiDocs from './pages/ApiDocs';
 
 export default function App() {
   return (
@@ -18,6 +19,7 @@ export default function App() {
             <Route path="/anomalies"      element={<Anomalies />} />
             <Route path="/graph"          element={<Graph />} />
             <Route path="/clusters"       element={<Clusters />} />
+            <Route path="/api-docs"        element={<ApiDocs />} />
             <Route path="*"               element={<Navigate to="/" replace />} />
           </Routes>
         </main>

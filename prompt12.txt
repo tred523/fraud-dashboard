@@ -1,0 +1,1 @@
+Fix the API Docs page routing. When clicking "API Docs" in the sidebar nothing happens. Check App.jsx and make sure the route /api-docs is properly registered and the ApiDocs component is imported and rendered correctly.
