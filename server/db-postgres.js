@@ -155,6 +155,10 @@ async function initDb() {
   await pool.query(`ALTER TABLE IF EXISTS payment_signals ADD COLUMN IF NOT EXISTS tenant_id INTEGER`);
   await pool.query(`ALTER TABLE IF EXISTS behavior_events ADD COLUMN IF NOT EXISTS tenant_id INTEGER`);
 
+  await pool.query(`ALTER TABLE IF EXISTS account_events ADD COLUMN IF NOT EXISTS api_key_id INTEGER DEFAULT 1`);
+  await pool.query(`ALTER TABLE IF EXISTS payment_signals ADD COLUMN IF NOT EXISTS api_key_id INTEGER DEFAULT 1`);
+  await pool.query(`ALTER TABLE IF EXISTS behavior_events ADD COLUMN IF NOT EXISTS api_key_id INTEGER DEFAULT 1`);
+
   await pool.query(`
     CREATE TABLE IF NOT EXISTS bin_cache (
       bin TEXT PRIMARY KEY,

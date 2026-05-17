@@ -1,0 +1,10 @@
+Fix critical database error: column "api_key_id" does not exist in anomalies.js line 218.
+
+1. In server/db-postgres.js add these ALTER TABLE statements:
+ALTER TABLE IF EXISTS account_events ADD COLUMN IF NOT EXISTS api_key_id INTEGER DEFAULT 1;
+ALTER TABLE IF EXISTS payment_signals ADD COLUMN IF NOT EXISTS api_key_id INTEGER DEFAULT 1;
+ALTER TABLE IF EXISTS behavior_events ADD COLUMN IF NOT EXISTS api_key_id INTEGER DEFAULT 1;
+
+2. In server/anomalies.js find line 218 where api_key_id is used in a query and make it optional - if the column doesn't exist in the result, skip the filter. Or simply remove api_key_id from the WHERE clause in anomalies.js queries entirely since we don't need tenant filtering in anomalies yet.
+
+3. Also add error handling to all queries in anomalies.js - wrap each detection in try/catch so if one fails, the others still run and return partial results instead of crashing everything.
