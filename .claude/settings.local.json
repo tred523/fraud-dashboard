@@ -62,7 +62,8 @@
       "PowerShell(Start-Process \"http://localhost:3001\")",
       "PowerShell(Get-ChildItem -Path \"C:\\\\Projects\\\\fraud-dashboard\\\\client\" -Recurse -File | Where-Object {$_.Extension -in @\\('.jsx', '.js', '.tsx', '.ts', '.css', '.scss'\\)} | Select-Object FullName | Sort-Object FullName)",
       "Bash(grep -E \"\\\\.\\(jsx|tsx\\)$\")",
-      "PowerShell(Start-Process powershell -ArgumentList \"-NoExit\", \"-Command\", \"Set-Location 'C:\\\\Projects\\\\fraud-dashboard\\\\client'; node node_modules\\\\.bin\\\\vite\" -WindowStyle Minimized)"
+      "PowerShell(Start-Process powershell -ArgumentList \"-NoExit\", \"-Command\", \"Set-Location 'C:\\\\Projects\\\\fraud-dashboard\\\\client'; node node_modules\\\\.bin\\\\vite\" -WindowStyle Minimized)",
+      "Bash(xargs grep -l \"Timeline\\\\|timeline\\\\|Activity\\\\|activity\\\\|Event\")"
     ]
   }
 }

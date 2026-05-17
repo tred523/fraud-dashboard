@@ -1,0 +1,10 @@
+Fix syntax error in server/routes/visitor.js line 45.
+Error: "syntax error at or near '.1'" in PostgreSQL query.
+
+The issue is that floating point numbers like 0.1, 0.5 etc are being interpolated directly into SQL string instead of using parameterized queries.
+
+Check server/routes/visitor.js around line 45 and fix:
+1. Find any SQL query that has hardcoded float numbers like WHERE tampering_ml_score > 0.5 or similar
+2. Replace all hardcoded numbers in SQL with parameterized placeholders ($1, $2 etc)
+3. Also add try/catch error handling around all queries in visitor.js so one failing query doesn't crash the whole server
+4. Same fix for any other route files that might have the same issue

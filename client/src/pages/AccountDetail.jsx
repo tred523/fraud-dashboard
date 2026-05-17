@@ -57,6 +57,14 @@ function MetaTag({ label, value }) {
   );
 }
 
+function normalizeTs(ts) {
+  if (!ts) return null;
+  const n = Number(ts);
+  if (!isNaN(n)) return n > 9999999999 ? n : n * 1000;
+  const d = new Date(ts);
+  return isNaN(d.getTime()) ? null : d.getTime();
+}
+
 export default function AccountDetail() {
   const { account_id } = useParams();
   const [data, setData] = useState(null);
@@ -76,6 +84,24 @@ export default function AccountDetail() {
 
   const { events, payment_methods, linked_visitors, verdict } = data;
 
+  const sortedEvents = [...events].map(e => ({ ...e, _ts: normalizeTs(e.timestamp) }))
+    .filter(e => e._ts).sort((a, b) => a._ts - b._ts);
+
+  const allTs = sortedEvents.map(e => e._ts);
+  const firstSeen = allTs.length ? Math.min(...allTs) : null;
+  const lastSeen  = allTs.length ? Math.max(...allTs) : null;
+  const uniqueIps = new Set(sortedEvents.map(e => e.ip_address).filter(Boolean)).size;
+
+  const withIp = sortedEvents.filter(e => e.ip_address);
+  let multiIpWarning = false;
+  const ONE_HOUR = 3600000;
+  outer: for (let i = 0; i < withIp.length - 1; i++) {
+    for (let j = i + 1; j < withIp.length; j++) {
+      if (withIp[j]._ts - withIp[i]._ts > ONE_HOUR) break;
+      if (withIp[i].ip_address !== withIp[j].ip_address) { multiIpWarning = true; break outer; }
+    }
+  }
+
   return (
     <div className="page">
       <div className="page-header">
@@ -91,49 +117,123 @@ export default function AccountDetail() {
         </div>
       </div>
 
+      {/* Summary bar */}
+      <div className="card" style={{ marginBottom: 16 }}>
+        <div style={{ padding: '14px 20px', display: 'flex', flexWrap: 'wrap' }}>
+          {[
+            { label: 'First Seen',   value: fmt(firstSeen) },
+            { label: 'Last Seen',    value: fmt(lastSeen) },
+            { label: 'Total Events', value: sortedEvents.length },
+            { label: 'Unique IPs',   value: uniqueIps || '—' },
+          ].map(({ label, value }, idx, arr) => (
+            <div key={label} style={{
+              display: 'flex', flexDirection: 'column', gap: 3,
+              padding: '0 24px',
+              borderRight: idx < arr.length - 1 ? '1px solid var(--border)' : 'none',
+            }}>
+              <div style={{ fontSize: 10, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '.06em' }}>{label}</div>
+              <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text1)' }}>{value}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {multiIpWarning && (
+        <div style={{
+          padding: '10px 16px', borderRadius: 8, marginBottom: 16,
+          background: '#f9731611', border: '1px solid #f9731644',
+          display: 'flex', alignItems: 'center', gap: 10,
+        }}>
+          <span style={{ fontSize: 16 }}>⚠️</span>
+          <span style={{ fontSize: 13, fontWeight: 700, color: '#f97316' }}>Suspicious: Multiple IPs detected</span>
+          <span style={{ fontSize: 12, color: 'var(--text3)' }}>
+            — This account was active from different IP addresses within 1 hour
+          </span>
+        </div>
+      )}
+
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 20, alignItems: 'start' }}>
         {/* Left column: timeline + payment methods */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
 
           {/* Timeline */}
           <div className="card">
-            <div className="card-header"><span className="card-title">Account Timeline</span></div>
+            <div className="card-header">
+              <span className="card-title">Account Timeline</span>
+              <span style={{ fontSize: 12, color: 'var(--text3)' }}>{sortedEvents.length} events</span>
+            </div>
             <div style={{ padding: '0 18px', display: 'flex', flexDirection: 'column', gap: 0 }}>
-              {events.map((ev, i) => {
-                const meta = ev.metadata ? (typeof ev.metadata === 'string' ? JSON.parse(ev.metadata) : ev.metadata) : {};
+              {sortedEvents.map((ev, i) => {
+                const meta = ev.metadata ? (typeof ev.metadata === 'string' ? (() => { try { return JSON.parse(ev.metadata); } catch { return {}; } })() : ev.metadata) : {};
+                const prev = i > 0 ? sortedEvents[i - 1] : null;
+                const gapMs = prev ? ev._ts - prev._ts : 0;
+                const showGap = prev && gapMs > 300000;
+                const ipChanged = prev?.ip_address && ev.ip_address && ev.ip_address !== prev.ip_address;
+
+                let dotColor = '#3b82f6';
+                if (ev.event_type === 'password_change' || ev.event_type === 'settings_change') dotColor = '#f97316';
+                else if (ev.event_type === 'export') dotColor = '#a78bfa';
+                else if (ev.event_type === 'payment') dotColor = '#22c55e';
+                else if (ev.event_type === 'signup') dotColor = '#22c55e';
+
+                let gapLabel = '';
+                if (showGap) {
+                  const mins = Math.round(gapMs / 60000);
+                  if (mins < 60) gapLabel = `${mins} min later`;
+                  else if (mins < 1440) gapLabel = `${Math.round(mins / 60)} hr later`;
+                  else gapLabel = `${Math.round(mins / 1440)}d later`;
+                }
+
                 return (
-                  <div key={i} style={{
-                    display: 'flex', gap: 14, padding: '12px 0',
-                    borderBottom: i < events.length - 1 ? '1px solid var(--border1)' : 'none',
-                  }}>
-                    <div style={{
-                      width: 30, height: 30, borderRadius: '50%',
-                      background: 'var(--border2)', display: 'flex', alignItems: 'center',
-                      justifyContent: 'center', fontSize: 14, flexShrink: 0, marginTop: 2,
-                    }}>
-                      {EVENT_ICONS[ev.event_type] || '•'}
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                        <span style={{ fontWeight: 600, color: 'var(--text1)', textTransform: 'capitalize' }}>
-                          {ev.event_type.replace(/_/g, ' ')}
-                        </span>
-                        {ev.ip_address && (
-                          <span style={{ fontSize: 11, color: 'var(--text4)', fontFamily: 'monospace' }}>
-                            {ev.ip_address}
-                          </span>
-                        )}
-                        <span style={{ fontSize: 11, color: 'var(--text4)', marginLeft: 'auto' }}>
-                          {fmt(ev.timestamp)}
-                        </span>
+                  <div key={i}>
+                    {showGap && (
+                      <div style={{ padding: '5px 44px', display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <span style={{ fontSize: 10, color: 'var(--text3)', fontStyle: 'italic' }}>┄ {gapLabel}</span>
                       </div>
-                      {Object.keys(meta).length > 0 && (
-                        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 6 }}>
-                          {Object.entries(meta).map(([k, v]) => (
-                            <MetaTag key={k} label={k} value={String(v)} />
-                          ))}
+                    )}
+                    <div style={{
+                      display: 'flex', gap: 14, padding: '12px 0',
+                      borderBottom: i < sortedEvents.length - 1 ? '1px solid var(--border1)' : 'none',
+                    }}>
+                      <div style={{
+                        width: 30, height: 30, borderRadius: '50%',
+                        background: dotColor + '22', border: `1px solid ${dotColor}44`,
+                        display: 'flex', alignItems: 'center',
+                        justifyContent: 'center', fontSize: 14, flexShrink: 0, marginTop: 2,
+                      }}>
+                        {EVENT_ICONS[ev.event_type] || '•'}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                          <span style={{ fontWeight: 600, color: 'var(--text1)', textTransform: 'capitalize' }}>
+                            {ev.event_type.replace(/_/g, ' ')}
+                          </span>
+                          {ev.ip_address && (
+                            <span style={{
+                              fontSize: 11, fontFamily: 'monospace',
+                              color: ipChanged ? '#f97316' : 'var(--text4)',
+                            }}>
+                              {ipChanged && '↕ '}{ev.ip_address}
+                            </span>
+                          )}
+                          {ipChanged && (
+                            <span style={{
+                              fontSize: 9, fontWeight: 700, color: '#f97316',
+                              padding: '1px 5px', borderRadius: 3, background: '#f9731622',
+                            }}>IP CHANGED</span>
+                          )}
+                          <span style={{ fontSize: 11, color: 'var(--text4)', marginLeft: 'auto' }}>
+                            {fmt(ev._ts)}
+                          </span>
                         </div>
-                      )}
+                        {Object.keys(meta).length > 0 && (
+                          <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 6 }}>
+                            {Object.entries(meta).map(([k, v]) => (
+                              <MetaTag key={k} label={k} value={String(v)} />
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 );

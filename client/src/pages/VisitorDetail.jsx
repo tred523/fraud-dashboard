@@ -210,6 +210,278 @@ function BehaviorTab({ behavior }) {
   );
 }
 
+function normalizeTs(ts) {
+  if (!ts) return null;
+  const n = Number(ts);
+  if (!isNaN(n)) return n > 9999999999 ? n : n * 1000;
+  const d = new Date(ts);
+  return isNaN(d.getTime()) ? null : d.getTime();
+}
+
+function UnifiedTimeline({ events, account_timeline, behavior }) {
+  const items = [];
+
+  for (const e of (events || [])) {
+    const ts = normalizeTs(e.timestamp);
+    if (!ts) continue;
+    items.push({
+      id: `scan-${e.id || ts}`,
+      timestamp: ts,
+      type: 'scan',
+      icon: '🔍',
+      label: 'Device Fingerprint Scan',
+      ip_address: e.ip_address || null,
+      city: e.city_name || null,
+      country_code: e.country_code || null,
+      risk_level: e.risk_level || null,
+      risk_score: e.risk_score,
+      details: { os: e.os, browser: e.browser_name },
+    });
+  }
+
+  for (const e of (account_timeline || [])) {
+    const ts = normalizeTs(e.timestamp);
+    if (!ts) continue;
+    items.push({
+      id: `acct-${e.id || ts}`,
+      timestamp: ts,
+      type: 'account',
+      icon: EVENT_ICONS[e.event_type] || '◆',
+      label: (e.event_type || 'event').replace(/_/g, ' ').toUpperCase(),
+      ip_address: e.ip_address || null,
+      city: null,
+      country_code: null,
+      risk_level: null,
+      details: { account_id: e.account_id, metadata: e.metadata },
+    });
+  }
+
+  for (const b of (behavior || [])) {
+    const ts = normalizeTs(b.collected_at);
+    if (!ts) continue;
+    items.push({
+      id: `beh-${b.id || ts}`,
+      timestamp: ts,
+      type: 'behavior',
+      icon: '📡',
+      label: 'Behavior Session',
+      ip_address: null,
+      city: null,
+      country_code: null,
+      risk_level: null,
+      details: { bot_probability: b.bot_probability, session_duration: b.session_duration },
+    });
+  }
+
+  items.sort((a, b) => a.timestamp - b.timestamp);
+
+  const allTs = items.map(i => i.timestamp);
+  const firstSeen = allTs.length ? Math.min(...allTs) : null;
+  const lastSeen  = allTs.length ? Math.max(...allTs) : null;
+  const totalSessions = (behavior || []).length;
+  const allIps = new Set([
+    ...(events || []).map(e => e.ip_address),
+    ...(account_timeline || []).map(e => e.ip_address),
+  ].filter(Boolean));
+  const uniqueDevices = new Set((events || []).map(e => e.font_hash).filter(Boolean)).size;
+
+  const scanEvts = (events || [])
+    .map(e => ({ ts: normalizeTs(e.timestamp), ip: e.ip_address }))
+    .filter(e => e.ts && e.ip)
+    .sort((a, b) => a.ts - b.ts);
+
+  let multiIpWarning = false;
+  const ONE_HOUR = 3600000;
+  outer: for (let i = 0; i < scanEvts.length - 1; i++) {
+    for (let j = i + 1; j < scanEvts.length; j++) {
+      if (scanEvts[j].ts - scanEvts[i].ts > ONE_HOUR) break;
+      if (scanEvts[i].ip !== scanEvts[j].ip) { multiIpWarning = true; break outer; }
+    }
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      {/* Summary bar */}
+      <div className="card">
+        <div style={{ padding: '14px 20px', display: 'flex', flexWrap: 'wrap' }}>
+          {[
+            { label: 'First Seen',      value: fmt(firstSeen) },
+            { label: 'Last Seen',       value: fmt(lastSeen) },
+            { label: 'Total Sessions',  value: totalSessions || '—' },
+            { label: 'Unique IPs',      value: allIps.size || '—' },
+            { label: 'Unique Devices',  value: uniqueDevices || '—' },
+          ].map(({ label, value }, idx, arr) => (
+            <div key={label} style={{
+              display: 'flex', flexDirection: 'column', gap: 3,
+              padding: '0 24px',
+              borderRight: idx < arr.length - 1 ? '1px solid var(--border)' : 'none',
+            }}>
+              <div style={{ fontSize: 10, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '.06em' }}>{label}</div>
+              <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text1)' }}>{value}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {multiIpWarning && (
+        <div style={{
+          padding: '10px 16px', borderRadius: 8,
+          background: '#f9731611', border: '1px solid #f9731644',
+          display: 'flex', alignItems: 'center', gap: 10,
+        }}>
+          <span style={{ fontSize: 16 }}>⚠️</span>
+          <span style={{ fontSize: 13, fontWeight: 700, color: '#f97316' }}>Suspicious: Multiple IPs detected</span>
+          <span style={{ fontSize: 12, color: 'var(--text3)' }}>
+            — This visitor was seen from different IP addresses within 1 hour
+          </span>
+        </div>
+      )}
+
+      <div className="card">
+        <div className="card-header">
+          <span className="card-title">Activity Timeline</span>
+          <span style={{ fontSize: 12, color: 'var(--text3)' }}>{items.length} events</span>
+        </div>
+        <div style={{ padding: '14px 14px 14px 42px', position: 'relative' }}>
+          <div style={{
+            position: 'absolute', left: 25, top: 20, bottom: 20,
+            width: 2, background: 'var(--border)', borderRadius: 1,
+          }} />
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            {items.map((item, idx) => {
+              const prev = idx > 0 ? items[idx - 1] : null;
+              const gapMs = prev ? item.timestamp - prev.timestamp : 0;
+              const showGap = prev && gapMs > 300000;
+              const ipChanged = prev?.ip_address && item.ip_address && item.ip_address !== prev.ip_address;
+
+              let dotColor = '#3b82f6';
+              let cardBorder = 'var(--border)';
+              if (item.type === 'scan') {
+                if (item.risk_level === 'HIGH RISK') { dotColor = '#ef4444'; cardBorder = '#ef444433'; }
+                else if (item.risk_level === 'SUSPICIOUS') { dotColor = '#f97316'; cardBorder = '#f9731633'; }
+                else if (item.risk_level === 'LOW') dotColor = '#eab308';
+                else dotColor = '#22c55e';
+              } else if (item.type === 'behavior') {
+                const bp = item.details.bot_probability ?? 0;
+                if (bp > 80) { dotColor = '#ef4444'; cardBorder = '#ef444433'; }
+                else if (bp > 50) { dotColor = '#f97316'; cardBorder = '#f9731633'; }
+                else dotColor = '#22c55e';
+              } else if (item.type === 'account') {
+                dotColor = '#a78bfa';
+              }
+
+              let gapLabel = '';
+              if (showGap) {
+                const mins = Math.round(gapMs / 60000);
+                if (mins < 60) gapLabel = `${mins} min later`;
+                else if (mins < 1440) gapLabel = `${Math.round(mins / 60)} hr later`;
+                else gapLabel = `${Math.round(mins / 1440)}d later`;
+              }
+
+              return (
+                <div key={item.id}>
+                  {showGap && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', marginLeft: -14 }}>
+                      <span style={{ width: 28, textAlign: 'center', color: 'var(--text3)' }}>┄</span>
+                      <span style={{ fontSize: 10, color: 'var(--text3)', fontStyle: 'italic' }}>{gapLabel}</span>
+                    </div>
+                  )}
+                  <div style={{ position: 'relative', marginBottom: 8 }}>
+                    <div style={{
+                      position: 'absolute', left: -21, top: 12,
+                      width: 10, height: 10, borderRadius: '50%',
+                      background: dotColor, border: '2px solid var(--sidebar)',
+                      zIndex: 1, boxShadow: `0 0 0 3px ${dotColor}22`,
+                    }} />
+                    <div style={{
+                      padding: '10px 12px', background: 'var(--sidebar)', borderRadius: 6,
+                      border: `1px solid ${cardBorder}`,
+                      display: 'flex', flexDirection: 'column', gap: 5,
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: 14, flexShrink: 0 }}>{item.icon}</span>
+                        <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text)', letterSpacing: '.03em' }}>
+                          {item.label}
+                        </span>
+                        {item.type === 'scan' && item.risk_level && (
+                          <span style={{
+                            fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 3,
+                            background: dotColor + '22', color: dotColor, letterSpacing: '.04em',
+                          }}>
+                            {item.risk_level}
+                          </span>
+                        )}
+                        {item.type === 'scan' && item.risk_score != null && (
+                          <span style={{ fontSize: 10, color: dotColor }}>Score: {item.risk_score}</span>
+                        )}
+                        {item.type === 'behavior' && (
+                          <span style={{
+                            fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 3,
+                            background: dotColor + '22', color: dotColor,
+                          }}>
+                            BOT {Math.round(item.details.bot_probability ?? 0)}%
+                          </span>
+                        )}
+                        <span style={{ fontSize: 10, color: 'var(--text3)', marginLeft: 'auto', whiteSpace: 'nowrap' }}>
+                          {fmt(item.timestamp)}
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', gap: 10, fontSize: 11, color: 'var(--text3)', flexWrap: 'wrap', alignItems: 'center' }}>
+                        {item.ip_address && (
+                          <span style={{ fontFamily: 'monospace', color: ipChanged ? '#f97316' : 'var(--text2)' }}>
+                            {ipChanged && '↕ '}{item.ip_address}
+                          </span>
+                        )}
+                        {ipChanged && (
+                          <span style={{
+                            fontSize: 9, fontWeight: 700, color: '#f97316',
+                            padding: '1px 5px', borderRadius: 3, background: '#f9731622',
+                          }}>IP CHANGED</span>
+                        )}
+                        {item.city && (
+                          <span>{item.city}{item.country_code ? ` · ${item.country_code}` : ''}</span>
+                        )}
+                        {item.type === 'scan' && (item.details.browser || item.details.os) && (
+                          <span>{[item.details.browser, item.details.os].filter(Boolean).join(' · ')}</span>
+                        )}
+                        {item.type === 'account' && item.details.account_id && (
+                          <span style={{ color: 'var(--text2)' }}>{item.details.account_id}</span>
+                        )}
+                        {item.type === 'behavior' && item.details.session_duration != null && (
+                          <span>Duration: {Math.round(item.details.session_duration / 1000)}s</span>
+                        )}
+                      </div>
+                      {item.type === 'account' && item.details.metadata && (() => {
+                        try {
+                          const meta = typeof item.details.metadata === 'string'
+                            ? JSON.parse(item.details.metadata)
+                            : item.details.metadata;
+                          const entries = Object.entries(meta || {});
+                          if (!entries.length) return null;
+                          return (
+                            <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 2 }}>
+                              {entries.map(([k, v]) => (
+                                <span key={k} style={{
+                                  fontSize: 10, padding: '1px 6px', borderRadius: 8,
+                                  background: 'var(--border2)', color: 'var(--text3)',
+                                }}>{k}: {String(v)}</span>
+                              ))}
+                            </div>
+                          );
+                        } catch { return null; }
+                      })()}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function VisitorDetail() {
   const { id } = useParams();
   const [data, setData] = useState(null);
@@ -288,7 +560,7 @@ export default function VisitorDetail() {
 
       {/* Tabs */}
       <div style={{ display: 'flex', gap: 4, marginBottom: 20, borderBottom: '1px solid var(--border)', paddingBottom: 0 }}>
-        {['overview', 'behavior'].map(tab => (
+        {['overview', 'timeline', 'behavior'].map(tab => (
           <button key={tab} onClick={() => setActiveTab(tab)} style={{
             padding: '8px 16px', background: 'none', border: 'none', cursor: 'pointer',
             fontSize: 13, fontWeight: 500, color: activeTab === tab ? 'var(--blue)' : 'var(--text3)',
@@ -305,9 +577,11 @@ export default function VisitorDetail() {
         ))}
       </div>
 
-      {activeTab === 'behavior' ? (
-        <BehaviorTab behavior={behavior} />
-      ) : null}
+      {activeTab === 'behavior' && <BehaviorTab behavior={behavior} />}
+
+      {activeTab === 'timeline' && (
+        <UnifiedTimeline events={events} account_timeline={account_timeline} behavior={behavior} />
+      )}
 
       {activeTab === 'overview' && verdict && (
         <div className="card" style={{ marginBottom: 20 }}>

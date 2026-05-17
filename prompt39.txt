@@ -1,0 +1,18 @@
+Improve the account timeline to show a complete chronological history of all account activity.
+
+1. In VisitorDetail.jsx create a unified Timeline tab (replace or enhance existing Overview tab):
+- Show ALL events chronologically in one timeline:
+  * Fingerprint scans (device checks)
+  * Account events from /api/ingest (login, payment, signup etc)
+  * Behavior sessions
+  * Anomaly detections
+- Each timeline item shows: time, icon, event type, IP address, city, key details
+- Color code by risk: red=high risk event, orange=suspicious, green=clean
+- Show IP changes highlighted in orange when IP differs from previous event
+- Show time gaps between events (e.g. "3 hours later")
+
+2. In AccountDetail.jsx same improvement - unified timeline
+
+3. Add a "First seen / Last seen / Total sessions / Unique IPs / Unique devices" summary bar at top of timeline
+
+4. If same visitor_id appears from 2 different IPs within 1 hour - highlight with warning banner "Suspicious: Multiple IPs detected"

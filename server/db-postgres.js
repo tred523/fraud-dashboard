@@ -195,14 +195,14 @@ async function initDb() {
   await pool.query(`
     UPDATE events SET risk_score = LEAST(100, (
       CASE WHEN anti_detect_browser = 1 THEN 40 ELSE 0 END +
-      CASE WHEN tampering_ml_score > 0.5 THEN 25 WHEN tampering_ml_score >= 0.2 THEN 15 ELSE 0 END +
+      CASE WHEN tampering_ml_score > $1 THEN 25 WHEN tampering_ml_score >= $2 THEN 15 ELSE 0 END +
       CASE WHEN virtual_machine = 1 THEN 20 ELSE 0 END +
       CASE WHEN anomaly_score > 0 THEN 15 ELSE 0 END +
       CASE WHEN bot_probability > 80 THEN 35 WHEN bot_probability >= 50 THEN 20 ELSE 0 END +
       CASE WHEN suspect_score > 10 THEN 10 ELSE 0 END +
       CASE WHEN visitor_found = 0 THEN 5 ELSE 0 END
     ))
-  `);
+  `, [0.5, 0.2]);
 
   await pool.query(`
     UPDATE events SET risk_level = CASE
