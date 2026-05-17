@@ -1,0 +1,17 @@
+Add multi-tenancy to FraudShield. Each client should only see their own data.
+
+1. Update api_keys table to add: client_name, client_email, created_at, is_active
+2. Create POST /api/admin/create-client endpoint that generates a unique API key for each client
+3. Add tenant_id (api_key_id) to all data tables: events, account_events, payment_signals, behavior_events
+4. Update all API endpoints to filter data by api_key from request header or query param
+5. Create a simple Admin page in sidebar (only visible when ADMIN_KEY env variable matches):
+   - List all clients with their API keys
+   - Button to create new client
+   - Stats per client: total events, last active
+6. Update /api/ingest to tag all incoming events with the client's api_key_id
+7. Update /api/upload to require api_key parameter
+8. Default demo_key_12345 shows demo data visible to everyone
+9. Add login page - client enters their API key to access their dashboard
+   - Store api_key in localStorage
+   - All API calls include api_key in header
+   - If no key → show login page

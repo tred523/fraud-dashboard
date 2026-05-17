@@ -1,6 +1,6 @@
 const express = require('express');
 const crypto = require('crypto');
-const { insertEvents, setLastWebhookTime } = require('../db');
+const { insertEvents, setLastWebhookTime, getDb } = require('../db');
 
 const router = express.Router();
 
@@ -82,9 +82,17 @@ router.post('/fingerprint', async (req, res) => {
     return res.status(400).json({ error: 'Invalid JSON payload' });
   }
 
+  let tenantId = null;
+  const apiKey = req.headers['x-api-key'] || req.query.api_key;
+  if (apiKey) {
+    const db = getDb();
+    const keyRow = db.get('SELECT id FROM api_keys WHERE key = ? AND is_active = 1', [apiKey]);
+    if (keyRow) tenantId = keyRow.id;
+  }
+
   try {
     const normalized = parseFpWebhook(payload);
-    await insertEvents([normalized]);
+    insertEvents([normalized], tenantId);
     setLastWebhookTime();
     res.json({ ok: true });
   } catch (err) {

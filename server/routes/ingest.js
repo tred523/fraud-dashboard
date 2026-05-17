@@ -43,11 +43,11 @@ router.post('/', async (req, res) => {
 
       await db.run(
         `INSERT INTO payment_signals
-           (account_id, card_last4, card_bin, paypal_email, bank_name, card_type, card_brand, country, is_prepaid, is_virtual, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+           (account_id, card_last4, card_bin, paypal_email, bank_name, card_type, card_brand, country, is_prepaid, is_virtual, created_at, api_key_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [account_id, card_last4 || null, card_bin || null, paypal_email || null,
          binInfo?.bank_name || null, binInfo?.card_type || null, binInfo?.card_brand || null,
-         binInfo?.country || null, isPrepaid, isVirtual, ts]
+         binInfo?.country || null, isPrepaid, isVirtual, ts, keyRow.id]
       );
     }
   }

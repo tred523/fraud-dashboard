@@ -1,24 +1,25 @@
 const express = require('express');
 const { getDb } = require('../db');
 const { calculateVerdict } = require('../verdict');
+const { resolveTenant } = require('../tenant');
 
 const router = express.Router();
 
-async function getPaymentData(db, events) {
+async function getPaymentData(db, events, tenant) {
   const ips = [...new Set(events.map(e => e.ip_address).filter(Boolean))];
   if (ips.length === 0) return { is_shared: false, methods: [] };
 
   const ph = ips.map(() => '?').join(',');
   const linkedAccountIds = [...new Set(
-    (await db.all(`SELECT DISTINCT account_id FROM account_events WHERE ip_address IN (${ph})`, ips))
+    db.all(`SELECT DISTINCT account_id FROM account_events WHERE ip_address IN (${ph}) AND ${tenant.acctWhere}`, [...ips, ...tenant.acctParams])
       .map(r => r.account_id)
   )];
   if (linkedAccountIds.length === 0) return { is_shared: false, methods: [] };
 
   const phAcc = linkedAccountIds.map(() => '?').join(',');
-  const signals = await db.all(
-    `SELECT * FROM payment_signals WHERE account_id IN (${phAcc})`,
-    linkedAccountIds
+  const signals = db.all(
+    `SELECT * FROM payment_signals WHERE account_id IN (${phAcc}) AND ${tenant.pmtWhere}`,
+    [...linkedAccountIds, ...tenant.pmtParams]
   );
 
   const seen = new Set();
@@ -32,14 +33,14 @@ async function getPaymentData(db, events) {
 
     let linked = [];
     if (sig.paypal_email) {
-      linked = await db.all(
-        'SELECT DISTINCT account_id FROM payment_signals WHERE paypal_email = ? AND account_id != ?',
-        [sig.paypal_email, sig.account_id]
+      linked = db.all(
+        `SELECT DISTINCT account_id FROM payment_signals WHERE paypal_email = ? AND account_id != ? AND ${tenant.pmtWhere}`,
+        [sig.paypal_email, sig.account_id, ...tenant.pmtParams]
       );
     } else if (sig.card_last4 && sig.card_bin) {
-      linked = await db.all(
-        'SELECT DISTINCT account_id FROM payment_signals WHERE card_last4 = ? AND card_bin = ? AND account_id != ?',
-        [sig.card_last4, sig.card_bin, sig.account_id]
+      linked = db.all(
+        `SELECT DISTINCT account_id FROM payment_signals WHERE card_last4 = ? AND card_bin = ? AND account_id != ? AND ${tenant.pmtWhere}`,
+        [sig.card_last4, sig.card_bin, sig.account_id, ...tenant.pmtParams]
       );
     }
     if (linked.length > 0) is_shared = true;
@@ -55,18 +56,21 @@ async function getPaymentData(db, events) {
 
 // Batch verdicts — must be registered before /:visitorId
 router.get('/batch', async (req, res) => {
+  const tenant = await resolveTenant(req);
+  if (!tenant) return res.status(401).json({ error: 'API key required' });
+
   const db = getDb();
   const ids = (req.query.ids || '').split(',').map(s => s.trim()).filter(Boolean).slice(0, 100);
   if (ids.length === 0) return res.json({});
 
   const ph = ids.map(() => '?').join(',');
-  const allEvents = await db.all(
-    `SELECT * FROM events WHERE visitor_id IN (${ph}) ORDER BY visitor_id, timestamp ASC`,
-    ids
+  const allEvents = db.all(
+    `SELECT * FROM events WHERE visitor_id IN (${ph}) AND ${tenant.eventsWhere} ORDER BY visitor_id, timestamp ASC`,
+    [...ids, ...tenant.eventsParams]
   );
-  const allBehavior = await db.all(
-    `SELECT * FROM behavior_events WHERE visitor_id IN (${ph})`,
-    ids
+  const allBehavior = db.all(
+    `SELECT * FROM behavior_events WHERE visitor_id IN (${ph}) AND ${tenant.acctWhere}`,
+    [...ids, ...tenant.acctParams]
   );
 
   const eventsByVisitor = {};
@@ -89,21 +93,24 @@ router.get('/batch', async (req, res) => {
 });
 
 router.get('/:visitorId', async (req, res) => {
+  const tenant = await resolveTenant(req);
+  if (!tenant) return res.status(401).json({ error: 'API key required' });
+
   const db = getDb();
   const { visitorId } = req.params;
 
-  const events = await db.all(
-    'SELECT * FROM events WHERE visitor_id = ? ORDER BY timestamp ASC',
-    [visitorId]
+  const events = db.all(
+    `SELECT * FROM events WHERE visitor_id = ? AND ${tenant.eventsWhere} ORDER BY timestamp ASC`,
+    [visitorId, ...tenant.eventsParams]
   );
   if (events.length === 0) return res.status(404).json({ error: 'Visitor not found' });
 
-  const behavior = await db.all(
-    'SELECT * FROM behavior_events WHERE visitor_id = ? ORDER BY collected_at DESC',
-    [visitorId]
+  const behavior = db.all(
+    `SELECT * FROM behavior_events WHERE visitor_id = ? AND ${tenant.acctWhere} ORDER BY collected_at DESC`,
+    [visitorId, ...tenant.acctParams]
   );
 
-  const paymentData = await getPaymentData(db, events);
+  const paymentData = await getPaymentData(db, events, tenant);
   const verdict = calculateVerdict(events, behavior, paymentData);
 
   res.json({ visitor_id: visitorId, ...verdict });

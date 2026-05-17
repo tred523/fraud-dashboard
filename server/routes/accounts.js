@@ -1,34 +1,35 @@
 const express = require('express');
 const { getDb } = require('../db');
 const { calculateVerdict } = require('../verdict');
+const { resolveTenant } = require('../tenant');
 
 const router = express.Router();
 
-async function buildAccountVerdict(db, accountId) {
-  const ipRows = await db.all(
-    'SELECT DISTINCT ip_address FROM account_events WHERE account_id = ? AND ip_address IS NOT NULL',
-    [accountId]
+async function buildAccountVerdict(db, accountId, tenant) {
+  const ipRows = db.all(
+    `SELECT DISTINCT ip_address FROM account_events WHERE account_id = ? AND ip_address IS NOT NULL AND ${tenant.acctWhere}`,
+    [accountId, ...tenant.acctParams]
   );
   const ips = ipRows.map(r => r.ip_address);
   if (ips.length === 0) return null;
 
   const ph = ips.map(() => '?').join(',');
-  const visitorEvents = await db.all(
-    `SELECT * FROM events WHERE ip_address IN (${ph})`,
-    ips
+  const visitorEvents = db.all(
+    `SELECT * FROM events WHERE ip_address IN (${ph}) AND ${tenant.eventsWhere}`,
+    [...ips, ...tenant.eventsParams]
   );
   if (visitorEvents.length === 0) return null;
 
   const visitorIds = [...new Set(visitorEvents.map(e => e.visitor_id))];
   const bPh = visitorIds.map(() => '?').join(',');
-  const behavior = await db.all(
-    `SELECT * FROM behavior_events WHERE visitor_id IN (${bPh})`,
-    visitorIds
+  const behavior = db.all(
+    `SELECT * FROM behavior_events WHERE visitor_id IN (${bPh}) AND ${tenant.acctWhere}`,
+    [...visitorIds, ...tenant.acctParams]
   );
 
-  const paymentRows = await db.all(
-    'SELECT * FROM payment_signals WHERE account_id = ?',
-    [accountId]
+  const paymentRows = db.all(
+    `SELECT * FROM payment_signals WHERE account_id = ? AND ${tenant.pmtWhere}`,
+    [accountId, ...tenant.pmtParams]
   );
 
   let isShared = false;
@@ -36,14 +37,14 @@ async function buildAccountVerdict(db, accountId) {
   for (const sig of paymentRows) {
     let linked = [];
     if (sig.paypal_email) {
-      linked = await db.all(
-        'SELECT DISTINCT account_id FROM payment_signals WHERE paypal_email = ? AND account_id != ?',
-        [sig.paypal_email, accountId]
+      linked = db.all(
+        `SELECT DISTINCT account_id FROM payment_signals WHERE paypal_email = ? AND account_id != ? AND ${tenant.pmtWhere}`,
+        [sig.paypal_email, accountId, ...tenant.pmtParams]
       );
     } else if (sig.card_last4 && sig.card_bin) {
-      linked = await db.all(
-        'SELECT DISTINCT account_id FROM payment_signals WHERE card_last4 = ? AND card_bin = ? AND account_id != ?',
-        [sig.card_last4, sig.card_bin, accountId]
+      linked = db.all(
+        `SELECT DISTINCT account_id FROM payment_signals WHERE card_last4 = ? AND card_bin = ? AND account_id != ? AND ${tenant.pmtWhere}`,
+        [sig.card_last4, sig.card_bin, accountId, ...tenant.pmtParams]
       );
     }
     if (linked.length > 0) isShared = true;
@@ -55,45 +56,50 @@ async function buildAccountVerdict(db, accountId) {
 
 // GET /api/accounts
 router.get('/', async (req, res) => {
+  const tenant = await resolveTenant(req);
+  if (!tenant) return res.status(401).json({ error: 'API key required' });
+
   const db = getDb();
 
-  const rows = await db.all(
+  const rows = db.all(
     `SELECT account_id, COUNT(*) AS total_events, MAX(timestamp) AS last_seen
      FROM account_events
+     WHERE ${tenant.acctWhere}
      GROUP BY account_id
-     ORDER BY last_seen DESC`
+     ORDER BY last_seen DESC`,
+    tenant.acctParams
   );
 
   const result = [];
   for (const row of rows) {
-    const evTypeRows = await db.all(
-      'SELECT DISTINCT event_type FROM account_events WHERE account_id = ?',
-      [row.account_id]
+    const evTypeRows = db.all(
+      `SELECT DISTINCT event_type FROM account_events WHERE account_id = ? AND ${tenant.acctWhere}`,
+      [row.account_id, ...tenant.acctParams]
     );
     const eventTypes = evTypeRows.map(r => r.event_type);
 
-    const ipRows = await db.all(
-      'SELECT DISTINCT ip_address FROM account_events WHERE account_id = ? AND ip_address IS NOT NULL',
-      [row.account_id]
+    const ipRows = db.all(
+      `SELECT DISTINCT ip_address FROM account_events WHERE account_id = ? AND ip_address IS NOT NULL AND ${tenant.acctWhere}`,
+      [row.account_id, ...tenant.acctParams]
     );
     const ips = ipRows.map(r => r.ip_address);
 
     let linkedVisitors = [];
     if (ips.length > 0) {
       const ph = ips.map(() => '?').join(',');
-      const vRows = await db.all(
-        `SELECT DISTINCT visitor_id FROM events WHERE ip_address IN (${ph})`,
-        ips
+      const vRows = db.all(
+        `SELECT DISTINCT visitor_id FROM events WHERE ip_address IN (${ph}) AND ${tenant.eventsWhere}`,
+        [...ips, ...tenant.eventsParams]
       );
       linkedVisitors = vRows.map(r => r.visitor_id);
     }
 
-    const pmRows = await db.all(
-      'SELECT COUNT(*) AS cnt FROM payment_signals WHERE account_id = ?',
-      [row.account_id]
+    const pmRows = db.all(
+      `SELECT COUNT(*) AS cnt FROM payment_signals WHERE account_id = ? AND ${tenant.pmtWhere}`,
+      [row.account_id, ...tenant.pmtParams]
     );
 
-    const verdict = await buildAccountVerdict(db, row.account_id);
+    const verdict = await buildAccountVerdict(db, row.account_id, tenant);
 
     result.push({
       account_id: row.account_id,
@@ -112,12 +118,15 @@ router.get('/', async (req, res) => {
 
 // GET /api/accounts/:account_id
 router.get('/:account_id', async (req, res) => {
+  const tenant = await resolveTenant(req);
+  if (!tenant) return res.status(401).json({ error: 'API key required' });
+
   const db = getDb();
   const { account_id } = req.params;
 
-  const events = await db.all(
-    'SELECT * FROM account_events WHERE account_id = ? ORDER BY timestamp ASC',
-    [account_id]
+  const events = db.all(
+    `SELECT * FROM account_events WHERE account_id = ? AND ${tenant.acctWhere} ORDER BY timestamp ASC`,
+    [account_id, ...tenant.acctParams]
   );
   if (events.length === 0) return res.status(404).json({ error: 'Account not found' });
 
@@ -126,18 +135,18 @@ router.get('/:account_id', async (req, res) => {
   let linkedVisitors = [];
   if (ips.length > 0) {
     const ph = ips.map(() => '?').join(',');
-    linkedVisitors = await db.all(
-      `SELECT DISTINCT visitor_id, ip_address FROM events WHERE ip_address IN (${ph})`,
-      ips
+    linkedVisitors = db.all(
+      `SELECT DISTINCT visitor_id, ip_address FROM events WHERE ip_address IN (${ph}) AND ${tenant.eventsWhere}`,
+      [...ips, ...tenant.eventsParams]
     );
   }
 
-  const paymentMethods = await db.all(
-    'SELECT * FROM payment_signals WHERE account_id = ? ORDER BY created_at DESC',
-    [account_id]
+  const paymentMethods = db.all(
+    `SELECT * FROM payment_signals WHERE account_id = ? AND ${tenant.pmtWhere} ORDER BY created_at DESC`,
+    [account_id, ...tenant.pmtParams]
   );
 
-  const verdictResult = await buildAccountVerdict(db, account_id);
+  const verdictResult = await buildAccountVerdict(db, account_id, tenant);
 
   res.json({
     account_id,

@@ -15,6 +15,17 @@ export default function Sidebar() {
   const [showUpload, setShowUpload] = useState(false);
   const navigate = useNavigate();
 
+  const clientName = localStorage.getItem('fraudshield_client_name') || '';
+  const isAdmin = localStorage.getItem('fraudshield_is_admin') === 'true'
+    || !!localStorage.getItem('fraudshield_admin_key');
+
+  function logout() {
+    localStorage.removeItem('fraudshield_api_key');
+    localStorage.removeItem('fraudshield_client_name');
+    localStorage.removeItem('fraudshield_is_admin');
+    navigate('/login', { replace: true });
+  }
+
   return (
     <>
       <aside className="sidebar">
@@ -22,7 +33,7 @@ export default function Sidebar() {
           <div className="sidebar-logo-icon">FS</div>
           <div className="sidebar-logo-wrap">
             <span className="sidebar-logo-name">FraudShield</span>
-            <span className="sidebar-logo-sub">Detection Dashboard</span>
+            <span className="sidebar-logo-sub">{clientName || 'Detection Dashboard'}</span>
           </div>
         </div>
 
@@ -39,11 +50,27 @@ export default function Sidebar() {
               {label}
             </NavLink>
           ))}
+
+          {isAdmin && (
+            <>
+              <div className="nav-section" style={{ marginTop: 10 }}>Admin</div>
+              <NavLink
+                to="/admin"
+                className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}
+              >
+                <span className="nav-icon">⚙</span>
+                Clients
+              </NavLink>
+            </>
+          )}
         </nav>
 
-        <div className="sidebar-bottom">
+        <div className="sidebar-bottom" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           <button className="btn btn-primary" style={{ width: '100%', justifyContent: 'center' }} onClick={() => setShowUpload(true)}>
             ↑ Import Events
+          </button>
+          <button className="btn btn-ghost" style={{ width: '100%', justifyContent: 'center', fontSize: 12, color: 'var(--text3)' }} onClick={logout}>
+            Sign Out
           </button>
         </div>
       </aside>

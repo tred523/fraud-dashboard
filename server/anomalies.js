@@ -1,17 +1,22 @@
-async function detectAnomalies(db) {
+async function detectAnomalies(db, tenant) {
+  const evW = tenant ? tenant.eventsWhere : '1=1';
+  const evP = tenant ? tenant.eventsParams : [];
+  const pmW = tenant ? tenant.pmtWhere : '1=1';
+  const pmP = tenant ? tenant.pmtParams : [];
+
   const anomalies = [];
 
   // a) IP Sharing
-  const ipSharing = await db.all(`
+  const ipSharing = db.all(`
     SELECT ip_address,
            ${db.groupConcat('visitor_id')} as visitor_ids,
            COUNT(DISTINCT visitor_id) as cnt
     FROM events
-    WHERE ip_address IS NOT NULL
+    WHERE ip_address IS NOT NULL AND ${evW}
     GROUP BY ip_address
     HAVING COUNT(DISTINCT visitor_id) > 1
     ORDER BY cnt DESC
-  `);
+  `, evP);
 
   for (const row of ipSharing) {
     const cnt = parseInt(row.cnt, 10);
@@ -27,16 +32,16 @@ async function detectAnomalies(db) {
   }
 
   // b) Font Hash Clustering
-  const fontClusters = await db.all(`
+  const fontClusters = db.all(`
     SELECT font_hash,
            ${db.groupConcat('visitor_id')} as visitor_ids,
            COUNT(DISTINCT visitor_id) as cnt
     FROM events
-    WHERE font_hash IS NOT NULL AND font_hash != ''
+    WHERE font_hash IS NOT NULL AND font_hash != '' AND ${evW}
     GROUP BY font_hash
     HAVING COUNT(DISTINCT visitor_id) > 1
     ORDER BY cnt DESC
-  `);
+  `, evP);
 
   for (const row of fontClusters) {
     const cnt = parseInt(row.cnt, 10);
@@ -52,16 +57,16 @@ async function detectAnomalies(db) {
   }
 
   // c) WebGL Clustering
-  const webglClusters = await db.all(`
+  const webglClusters = db.all(`
     SELECT webgl_renderer_unmasked,
            ${db.groupConcat('visitor_id')} as visitor_ids,
            COUNT(DISTINCT visitor_id) as cnt
     FROM events
-    WHERE webgl_renderer_unmasked IS NOT NULL AND webgl_renderer_unmasked != ''
+    WHERE webgl_renderer_unmasked IS NOT NULL AND webgl_renderer_unmasked != '' AND ${evW}
     GROUP BY webgl_renderer_unmasked
     HAVING COUNT(DISTINCT visitor_id) > 1
     ORDER BY cnt DESC
-  `);
+  `, evP);
 
   for (const row of webglClusters) {
     const cnt = parseInt(row.cnt, 10);
@@ -80,16 +85,16 @@ async function detectAnomalies(db) {
   }
 
   // d) Rapid IP Change
-  const visitors = await db.all('SELECT DISTINCT visitor_id FROM events');
+  const visitors = db.all(`SELECT DISTINCT visitor_id FROM events WHERE ${evW}`, evP);
   const seenRapid = new Set();
 
   for (const { visitor_id } of visitors) {
     if (seenRapid.has(visitor_id)) continue;
-    const evts = await db.all(`
+    const evts = db.all(`
       SELECT ip_address, timestamp FROM events
-      WHERE visitor_id = ? AND ip_address IS NOT NULL
+      WHERE visitor_id = ? AND ip_address IS NOT NULL AND ${evW}
       ORDER BY timestamp ASC
-    `, [visitor_id]);
+    `, [visitor_id, ...evP]);
 
     const TEN_MIN = 10 * 60 * 1000;
     let found = false;
@@ -126,12 +131,13 @@ async function detectAnomalies(db) {
   }
 
   // e) VM + MacIntel contradiction
-  const vmMac = await db.all(`
+  const vmMac = db.all(`
     SELECT DISTINCT visitor_id, webgl_renderer_unmasked, platform
     FROM events
     WHERE virtual_machine = 1 AND platform = 'MacIntel'
       AND webgl_renderer_unmasked LIKE '%Apple M%'
-  `);
+      AND ${evW}
+  `, evP);
 
   for (const row of vmMac) {
     anomalies.push({
@@ -146,16 +152,16 @@ async function detectAnomalies(db) {
   }
 
   // f) Anti-detect cluster (by font_hash)
-  const antiDetectFont = await db.all(`
+  const antiDetectFont = db.all(`
     SELECT font_hash,
            ${db.groupConcat('visitor_id')} as visitor_ids,
            COUNT(DISTINCT visitor_id) as cnt
     FROM events
-    WHERE anti_detect_browser = 1 AND font_hash IS NOT NULL AND font_hash != ''
+    WHERE anti_detect_browser = 1 AND font_hash IS NOT NULL AND font_hash != '' AND ${evW}
     GROUP BY font_hash
     HAVING COUNT(DISTINCT visitor_id) > 1
     ORDER BY cnt DESC
-  `);
+  `, evP);
 
   for (const row of antiDetectFont) {
     const cnt = parseInt(row.cnt, 10);
@@ -171,17 +177,18 @@ async function detectAnomalies(db) {
   }
 
   // Anti-detect cluster by webgl
-  const antiDetectWebgl = await db.all(`
+  const antiDetectWebgl = db.all(`
     SELECT webgl_renderer_unmasked,
            ${db.groupConcat('visitor_id')} as visitor_ids,
            COUNT(DISTINCT visitor_id) as cnt
     FROM events
     WHERE anti_detect_browser = 1
       AND webgl_renderer_unmasked IS NOT NULL AND webgl_renderer_unmasked != ''
+      AND ${evW}
     GROUP BY webgl_renderer_unmasked
     HAVING COUNT(DISTINCT visitor_id) > 1
     ORDER BY cnt DESC
-  `);
+  `, evP);
 
   for (const row of antiDetectWebgl) {
     const cnt = parseInt(row.cnt, 10);
@@ -200,20 +207,16 @@ async function detectAnomalies(db) {
   }
 
   // g) Payment Sharing (card)
-  const allPayments = await db.all('SELECT * FROM payment_signals');
-  console.log('[PAYMENT_SHARING] payment_signals rows:', allPayments.length, allPayments);
-
-  const cardSharing = await db.all(`
+  const cardSharing = db.all(`
     SELECT card_last4, card_bin,
            ${db.groupConcat('account_id')} as account_ids,
            COUNT(DISTINCT account_id) as cnt
     FROM payment_signals
-    WHERE card_last4 IS NOT NULL AND card_bin IS NOT NULL
+    WHERE card_last4 IS NOT NULL AND card_bin IS NOT NULL AND ${pmW}
     GROUP BY card_last4, card_bin
     HAVING COUNT(DISTINCT account_id) > 1
     ORDER BY cnt DESC
-  `);
-  console.log('[PAYMENT_SHARING] card sharing matches:', cardSharing);
+  `, pmP);
 
   for (const row of cardSharing) {
     const cnt = parseInt(row.cnt, 10);
@@ -229,17 +232,16 @@ async function detectAnomalies(db) {
   }
 
   // h) Payment Sharing (PayPal)
-  const paypalSharing = await db.all(`
+  const paypalSharing = db.all(`
     SELECT paypal_email,
            ${db.groupConcat('account_id')} as account_ids,
            COUNT(DISTINCT account_id) as cnt
     FROM payment_signals
-    WHERE paypal_email IS NOT NULL AND paypal_email != ''
+    WHERE paypal_email IS NOT NULL AND paypal_email != '' AND ${pmW}
     GROUP BY paypal_email
     HAVING COUNT(DISTINCT account_id) > 1
     ORDER BY cnt DESC
-  `);
-  console.log('[PAYMENT_SHARING] paypal sharing matches:', paypalSharing);
+  `, pmP);
 
   for (const row of paypalSharing) {
     const cnt = parseInt(row.cnt, 10);
