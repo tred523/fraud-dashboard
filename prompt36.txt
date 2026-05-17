@@ -1,0 +1,10 @@
+In server/db-postgres.js add seed data for behavior_events table if it's empty.
+Insert these records:
+1. visitor_id='3NcqkuFKy9k7spPP0EW9', bot_probability=90, mouse_smoothness_score=92, typing_rhythm_score=95, mouse_moves=0, clicks=5, keystrokes=30, backspaces=0, session_duration=45000
+2. visitor_id='LWrtj8049U0NHAfoVnuv', bot_probability=75, mouse_smoothness_score=80, typing_rhythm_score=70, mouse_moves=5, clicks=3, keystrokes=20, backspaces=2, session_duration=30000
+
+Also update risk_score for these visitors in events table:
+- visitor 3NcqkuFKy9k7spPP0EW9: set bot_probability=90 and recalculate risk_score
+- visitor LWrtj8049U0NHAfoVnuv: set bot_probability=75 and recalculate risk_score
+
+Only insert if behavior_events table is empty.

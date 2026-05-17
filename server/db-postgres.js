@@ -267,13 +267,13 @@ async function seedAccountEvents(apiKeyId) {
 async function seedBehaviorEvents() {
   const now = Date.now();
   const rows = [
-    { visitor_id: '3NcqkuFKy9k7spPP0EW9', bot_probability: 90, mouse_smoothness_score: 92, typing_rhythm_score: 95 },
-    { visitor_id: 'LWrtj8049U0NHAfoVnuv', bot_probability: 75, mouse_smoothness_score: 80, typing_rhythm_score: 70 },
+    { visitor_id: '3NcqkuFKy9k7spPP0EW9', bot_probability: 90, mouse_smoothness_score: 92, typing_rhythm_score: 95, mouse_move_count: 0, click_count: 5, keyboard_event_count: 30, backspace_count: 0, session_duration: 45000 },
+    { visitor_id: 'LWrtj8049U0NHAfoVnuv', bot_probability: 75, mouse_smoothness_score: 80, typing_rhythm_score: 70, mouse_move_count: 5, click_count: 3, keyboard_event_count: 20, backspace_count: 2, session_duration: 30000 },
   ];
   for (const r of rows) {
     await pool.query(
-      `INSERT INTO behavior_events (visitor_id, bot_probability, mouse_smoothness_score, typing_rhythm_score, collected_at) VALUES ($1, $2, $3, $4, $5)`,
-      [r.visitor_id, r.bot_probability, r.mouse_smoothness_score, r.typing_rhythm_score, now]
+      `INSERT INTO behavior_events (visitor_id, bot_probability, mouse_smoothness_score, typing_rhythm_score, mouse_move_count, click_count, keyboard_event_count, backspace_count, session_duration, collected_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+      [r.visitor_id, r.bot_probability, r.mouse_smoothness_score, r.typing_rhythm_score, r.mouse_move_count, r.click_count, r.keyboard_event_count, r.backspace_count, r.session_duration, now]
     );
   }
 }
