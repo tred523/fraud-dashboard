@@ -1,0 +1,31 @@
+Improve Visitor Detail page to show complete change history for a visitor_id across all their events.
+
+In server/routes/visitor.js add new data to the visitor response:
+1. "ip_history": list of all unique IPs used, with first/last seen timestamps and city for each
+2. "device_changes": detect when hardware changed between sessions:
+   - GPU changed (webgl_renderer_unmasked)
+   - OS changed
+   - Platform changed
+   - Hardware concurrency changed
+   - Device memory changed
+   - Font hash changed
+3. "session_timeline": all events sorted by timestamp with diff from previous:
+   - Show what changed since last session (new IP, new GPU etc)
+   - Show time gap between sessions
+   - Flag suspicious changes: GPU change = suspicious, OS change = very suspicious
+
+In VisitorDetail.jsx add new "History" tab showing:
+1. IP History section:
+   - Table: IP | City | Country | First Seen | Last Seen | Events count
+   - Highlight if more than 3 different IPs = suspicious
+
+2. Device Changes section:
+   - Timeline of hardware changes
+   - Each change shows: what changed, old value → new value, timestamp
+   - Red warning if OS or GPU changed (strong spoofing indicator)
+
+3. Session Timeline:
+   - All sessions chronologically
+   - Each session shows changes from previous
+   - "NEW IP" badge, "GPU CHANGED" badge, "OS CHANGED" badge
+   - Time between sessions shown

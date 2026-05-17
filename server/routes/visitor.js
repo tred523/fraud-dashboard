@@ -25,6 +25,74 @@ router.get('/:visitorId', async (req, res) => {
     const fonts  = [...new Set(events.map(e => e.font_hash).filter(Boolean))];
     const webgls = [...new Set(events.map(e => e.webgl_renderer_unmasked).filter(Boolean))];
 
+    // ip_history: unique IPs with first/last seen and event count
+    const ipMap = {};
+    for (const e of events) {
+      if (!e.ip_address) continue;
+      const ts = Number(e.timestamp);
+      if (!ipMap[e.ip_address]) {
+        ipMap[e.ip_address] = { ip: e.ip_address, city: e.city_name || null, country: e.country_code || null, first_seen: ts, last_seen: ts, count: 1 };
+      } else {
+        if (ts < ipMap[e.ip_address].first_seen) ipMap[e.ip_address].first_seen = ts;
+        if (ts > ipMap[e.ip_address].last_seen) ipMap[e.ip_address].last_seen = ts;
+        if (!ipMap[e.ip_address].city && e.city_name) ipMap[e.ip_address].city = e.city_name;
+        if (!ipMap[e.ip_address].country && e.country_code) ipMap[e.ip_address].country = e.country_code;
+        ipMap[e.ip_address].count++;
+      }
+    }
+    const ip_history = Object.values(ipMap).sort((a, b) => a.first_seen - b.first_seen);
+
+    // device_changes and session_timeline
+    const HARDWARE_FIELDS = [
+      { key: 'webgl_renderer_unmasked', label: 'GPU' },
+      { key: 'os', label: 'OS' },
+      { key: 'platform', label: 'Platform' },
+      { key: 'hardware_concurrency', label: 'CPU Cores' },
+      { key: 'device_memory', label: 'Device Memory' },
+      { key: 'font_hash', label: 'Font Hash' },
+    ];
+    const device_changes = [];
+    const session_timeline = [];
+    for (let i = 0; i < events.length; i++) {
+      const e = events[i];
+      const ts = Number(e.timestamp);
+      const changes = [];
+      let newIp = false;
+      let gapMs = null;
+      if (i > 0) {
+        const prev = events[i - 1];
+        gapMs = ts - Number(prev.timestamp);
+        if (prev.ip_address && e.ip_address && e.ip_address !== prev.ip_address) newIp = true;
+        for (const { key, label } of HARDWARE_FIELDS) {
+          if (prev[key] != null && e[key] != null && String(prev[key]) !== String(e[key])) {
+            changes.push({ field: label, old_value: String(prev[key]), new_value: String(e[key]) });
+            device_changes.push({
+              timestamp: ts,
+              field: label,
+              old_value: String(prev[key]),
+              new_value: String(e[key]),
+              suspicious: key === 'webgl_renderer_unmasked' || key === 'os',
+            });
+          }
+        }
+      }
+      session_timeline.push({
+        timestamp: ts,
+        ip_address: e.ip_address || null,
+        city: e.city_name || null,
+        country: e.country_code || null,
+        risk_level: e.risk_level || null,
+        risk_score: e.risk_score,
+        os: e.os || null,
+        browser: e.browser_name || null,
+        gpu: e.webgl_renderer_unmasked || null,
+        platform: e.platform || null,
+        new_ip: newIp,
+        gap_ms: gapMs,
+        changes,
+      });
+    }
+
     const ph = (arr) => arr.map(() => '?').join(',');
 
     const byIpResult = ips.length
@@ -111,7 +179,7 @@ router.get('/:visitorId', async (req, res) => {
       paymentData = { methods, is_shared: methods.some(m => m.linked_accounts.length > 0) };
     }
 
-    res.json({ events, related: { by_ip: byIp, by_font: byFont, by_webgl: byWebgl }, account_timeline: accountTimeline, behavior, payment: paymentData, linked_payments: linkedPayments });
+    res.json({ events, related: { by_ip: byIp, by_font: byFont, by_webgl: byWebgl }, account_timeline: accountTimeline, behavior, payment: paymentData, linked_payments: linkedPayments, ip_history, device_changes, session_timeline });
   } catch (err) {
     console.error('Error in GET /visitor/:visitorId:', err.message);
     res.status(500).json({ error: 'Internal server error' });

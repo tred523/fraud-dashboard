@@ -210,6 +210,191 @@ function BehaviorTab({ behavior }) {
   );
 }
 
+function fmtGap(ms) {
+  if (ms == null || ms <= 0) return null;
+  const mins = Math.round(ms / 60000);
+  if (mins < 60) return `${mins}m gap`;
+  if (mins < 1440) return `${Math.round(mins / 60)}h gap`;
+  return `${Math.round(mins / 1440)}d gap`;
+}
+
+function Badge({ label, color }) {
+  return (
+    <span style={{
+      fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 3,
+      background: color + '22', color, letterSpacing: '.04em', whiteSpace: 'nowrap',
+    }}>{label}</span>
+  );
+}
+
+function HistoryTab({ ip_history, device_changes, session_timeline }) {
+  const suspicious = (ip_history || []).length > 3;
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+
+      {/* IP History */}
+      <div className="card">
+        <div className="card-header">
+          <span className="card-title">IP History</span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 12, color: 'var(--text3)' }}>{(ip_history || []).length} unique IPs</span>
+            {suspicious && <Badge label="SUSPICIOUS" color="#ef4444" />}
+          </span>
+        </div>
+        {suspicious && (
+          <div style={{ margin: '0 16px 8px', padding: '8px 12px', borderRadius: 6, background: '#ef444411', border: '1px solid #ef444433', fontSize: 12, color: '#ef4444', fontWeight: 600 }}>
+            ⚠ More than 3 different IPs detected — strong spoofing/proxy indicator
+          </div>
+        )}
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>IP Address</th>
+                <th>City</th>
+                <th>Country</th>
+                <th>First Seen</th>
+                <th>Last Seen</th>
+                <th>Events</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(ip_history || []).map((row, i) => (
+                <tr key={i}>
+                  <td className="mono" style={{ fontSize: 12 }}>{row.ip}</td>
+                  <td style={{ fontSize: 12 }}>{row.city || '—'}</td>
+                  <td style={{ fontSize: 12 }}>{row.country ? `${countryFlag(row.country)} ${row.country}` : '—'}</td>
+                  <td style={{ fontSize: 12, color: 'var(--text3)', whiteSpace: 'nowrap' }}>{fmt(row.first_seen)}</td>
+                  <td style={{ fontSize: 12, color: 'var(--text3)', whiteSpace: 'nowrap' }}>{fmt(row.last_seen)}</td>
+                  <td style={{ fontSize: 12, fontWeight: 600 }}>{row.count}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Device Changes */}
+      <div className="card">
+        <div className="card-header">
+          <span className="card-title">Device Changes</span>
+          <span style={{ fontSize: 12, color: 'var(--text3)' }}>{(device_changes || []).length} change{(device_changes || []).length !== 1 ? 's' : ''}</span>
+        </div>
+        {(device_changes || []).length === 0 ? (
+          <div style={{ padding: '16px 20px', fontSize: 13, color: 'var(--text3)' }}>No hardware changes detected across sessions.</div>
+        ) : (
+          <div style={{ padding: '14px 14px 14px 42px', position: 'relative' }}>
+            <div style={{ position: 'absolute', left: 25, top: 20, bottom: 20, width: 2, background: 'var(--border)', borderRadius: 1 }} />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {(device_changes || []).map((ch, i) => {
+                const color = ch.suspicious ? '#ef4444' : '#f97316';
+                return (
+                  <div key={i} style={{ position: 'relative' }}>
+                    <div style={{
+                      position: 'absolute', left: -21, top: 12,
+                      width: 10, height: 10, borderRadius: '50%',
+                      background: color, border: '2px solid var(--sidebar)',
+                      zIndex: 1, boxShadow: `0 0 0 3px ${color}22`,
+                    }} />
+                    <div style={{
+                      padding: '10px 12px', background: 'var(--sidebar)', borderRadius: 6,
+                      border: `1px solid ${color}33`,
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 6 }}>
+                        <span style={{ fontSize: 11, fontWeight: 700, color, letterSpacing: '.03em' }}>{ch.field} CHANGED</span>
+                        {ch.suspicious && <Badge label={ch.field === 'OS' ? 'VERY SUSPICIOUS' : 'SUSPICIOUS'} color={color} />}
+                        <span style={{ fontSize: 10, color: 'var(--text3)', marginLeft: 'auto', whiteSpace: 'nowrap' }}>{fmt(ch.timestamp)}</span>
+                      </div>
+                      <div style={{ fontSize: 11, color: 'var(--text2)', display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+                        <span style={{ fontFamily: 'monospace', background: 'var(--border2)', padding: '1px 6px', borderRadius: 3, maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ch.old_value}</span>
+                        <span style={{ color: 'var(--text3)' }}>→</span>
+                        <span style={{ fontFamily: 'monospace', background: color + '22', color, padding: '1px 6px', borderRadius: 3, maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ch.new_value}</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Session Timeline */}
+      <div className="card">
+        <div className="card-header">
+          <span className="card-title">Session Timeline</span>
+          <span style={{ fontSize: 12, color: 'var(--text3)' }}>{(session_timeline || []).length} sessions</span>
+        </div>
+        <div style={{ padding: '14px 14px 14px 42px', position: 'relative' }}>
+          <div style={{ position: 'absolute', left: 25, top: 20, bottom: 20, width: 2, background: 'var(--border)', borderRadius: 1 }} />
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            {(session_timeline || []).map((s, i) => {
+              const hasGpuChange = s.changes.some(c => c.field === 'GPU');
+              const hasOsChange = s.changes.some(c => c.field === 'OS');
+              const dotColor = hasOsChange ? '#ef4444' : hasGpuChange ? '#ef4444' : s.new_ip ? '#f97316' : '#3b82f6';
+              const borderColor = (hasOsChange || hasGpuChange) ? '#ef444433' : s.new_ip ? '#f9731633' : 'var(--border)';
+              const gap = fmtGap(s.gap_ms);
+              return (
+                <div key={i}>
+                  {gap && i > 0 && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', marginLeft: -14 }}>
+                      <span style={{ width: 28, textAlign: 'center', color: 'var(--text3)' }}>┄</span>
+                      <span style={{ fontSize: 10, color: 'var(--text3)', fontStyle: 'italic' }}>{gap}</span>
+                    </div>
+                  )}
+                  <div style={{ position: 'relative', marginBottom: 8 }}>
+                    <div style={{
+                      position: 'absolute', left: -21, top: 12,
+                      width: 10, height: 10, borderRadius: '50%',
+                      background: dotColor, border: '2px solid var(--sidebar)',
+                      zIndex: 1, boxShadow: `0 0 0 3px ${dotColor}22`,
+                    }} />
+                    <div style={{ padding: '10px 12px', background: 'var(--sidebar)', borderRadius: 6, border: `1px solid ${borderColor}`, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text)' }}>Session {i + 1}</span>
+                        {s.new_ip && <Badge label="NEW IP" color="#f97316" />}
+                        {hasGpuChange && <Badge label="GPU CHANGED" color="#ef4444" />}
+                        {hasOsChange && <Badge label="OS CHANGED" color="#ef4444" />}
+                        {s.risk_level && (
+                          <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 5px', borderRadius: 3, background: dotColor + '22', color: dotColor, letterSpacing: '.04em' }}>
+                            {s.risk_level}
+                          </span>
+                        )}
+                        <span style={{ fontSize: 10, color: 'var(--text3)', marginLeft: 'auto', whiteSpace: 'nowrap' }}>{fmt(s.timestamp)}</span>
+                      </div>
+                      <div style={{ display: 'flex', gap: 10, fontSize: 11, color: 'var(--text3)', flexWrap: 'wrap', alignItems: 'center' }}>
+                        {s.ip_address && (
+                          <span className="mono" style={{ color: s.new_ip ? '#f97316' : 'var(--text2)' }}>{s.ip_address}</span>
+                        )}
+                        {s.city && <span>{s.city}{s.country ? ` · ${countryFlag(s.country)} ${s.country}` : ''}</span>}
+                        {(s.browser || s.os) && <span>{[s.browser, s.os].filter(Boolean).join(' · ')}</span>}
+                      </div>
+                      {s.changes.length > 0 && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 3, marginTop: 2 }}>
+                          {s.changes.map((ch, j) => (
+                            <div key={j} style={{ fontSize: 11, display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+                              <span style={{ color: ch.field === 'OS' || ch.field === 'GPU' ? '#ef4444' : '#f97316', fontWeight: 600 }}>{ch.field}:</span>
+                              <span style={{ fontFamily: 'monospace', color: 'var(--text3)', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ch.old_value}</span>
+                              <span style={{ color: 'var(--text3)' }}>→</span>
+                              <span style={{ fontFamily: 'monospace', color: ch.field === 'OS' || ch.field === 'GPU' ? '#ef4444' : '#f97316', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ch.new_value}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+    </div>
+  );
+}
+
 function normalizeTs(ts) {
   if (!ts) return null;
   const n = Number(ts);
@@ -505,7 +690,7 @@ export default function VisitorDetail() {
   if (error)   return <div className="page"><div className="empty-state"><div className="empty-icon">⚠️</div><div className="empty-text">{error}</div></div></div>;
   if (!data)   return null;
 
-  const { events, related, account_timeline, behavior, payment, linked_payments } = data;
+  const { events, related, account_timeline, behavior, payment, linked_payments, ip_history, device_changes, session_timeline } = data;
   const latest = events[events.length - 1];
   const maxRiskLevel = events.reduce((m, e) => {
     const order = { CLEAN: 0, LOW: 1, SUSPICIOUS: 2, 'HIGH RISK': 3 };
@@ -560,14 +745,19 @@ export default function VisitorDetail() {
 
       {/* Tabs */}
       <div style={{ display: 'flex', gap: 4, marginBottom: 20, borderBottom: '1px solid var(--border)', paddingBottom: 0 }}>
-        {['overview', 'timeline', 'behavior'].map(tab => (
+        {['overview', 'timeline', 'behavior', 'history'].map(tab => (
           <button key={tab} onClick={() => setActiveTab(tab)} style={{
             padding: '8px 16px', background: 'none', border: 'none', cursor: 'pointer',
             fontSize: 13, fontWeight: 500, color: activeTab === tab ? 'var(--blue)' : 'var(--text3)',
             borderBottom: activeTab === tab ? '2px solid var(--blue)' : '2px solid transparent',
             marginBottom: -1, textTransform: 'capitalize',
           }}>
-            {tab}{tab === 'behavior' && behavior?.length > 0 && (
+            {tab}{tab === 'history' && (device_changes?.length > 0 || ip_history?.length > 3) && (
+              <span style={{
+                marginLeft: 6, fontSize: 10, background: '#ef4444', color: '#fff',
+                borderRadius: 8, padding: '1px 5px', fontWeight: 700,
+              }}>!</span>
+            )}{tab === 'behavior' && behavior?.length > 0 && (
               <span style={{
                 marginLeft: 6, fontSize: 10, background: 'var(--blue)', color: '#fff',
                 borderRadius: 8, padding: '1px 5px', fontWeight: 700,
@@ -578,6 +768,8 @@ export default function VisitorDetail() {
       </div>
 
       {activeTab === 'behavior' && <BehaviorTab behavior={behavior} />}
+
+      {activeTab === 'history' && <HistoryTab ip_history={ip_history} device_changes={device_changes} session_timeline={session_timeline} />}
 
       {activeTab === 'timeline' && (
         <UnifiedTimeline events={events} account_timeline={account_timeline} behavior={behavior} />
