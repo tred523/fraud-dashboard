@@ -1,0 +1,10 @@
+Fix two critical server errors:
+
+1. In server/db-postgres.js - the api_keys table is missing "is_active" column. Add ALTER TABLE query to add it if not exists:
+ALTER TABLE api_keys ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true;
+Also add ALTER TABLE for any other new columns added recently: client_name, client_email.
+
+2. In server/anomalies.js - all database queries return {rows: [...]} in PostgreSQL but the code expects plain arrays. Fix all queries in anomalies.js to handle PostgreSQL response format:
+- Change: const ipSharing = await db.all(query)
+- To: const result = await db.all(query); const ipSharing = result.rows || result;
+Do this for ALL queries in anomalies.js (ipSharing, fontClusters, webglClusters, rapidIP, vmMacIntel, antiDetect, paymentSharing)

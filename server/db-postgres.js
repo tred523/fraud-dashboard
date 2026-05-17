@@ -109,6 +109,10 @@ async function initDb() {
     )
   `);
 
+  await pool.query(`ALTER TABLE api_keys ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true`);
+  await pool.query(`ALTER TABLE api_keys ADD COLUMN IF NOT EXISTS client_name TEXT`);
+  await pool.query(`ALTER TABLE api_keys ADD COLUMN IF NOT EXISTS client_email TEXT`);
+
   await pool.query(`
     CREATE TABLE IF NOT EXISTS account_events (
       id SERIAL PRIMARY KEY,

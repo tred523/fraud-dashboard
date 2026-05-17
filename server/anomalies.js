@@ -7,7 +7,7 @@ async function detectAnomalies(db, tenant) {
   const anomalies = [];
 
   // a) IP Sharing
-  const ipSharing = db.all(`
+  const ipSharingResult = await db.all(`
     SELECT ip_address,
            ${db.groupConcat('visitor_id')} as visitor_ids,
            COUNT(DISTINCT visitor_id) as cnt
@@ -17,6 +17,7 @@ async function detectAnomalies(db, tenant) {
     HAVING COUNT(DISTINCT visitor_id) > 1
     ORDER BY cnt DESC
   `, evP);
+  const ipSharing = ipSharingResult.rows || ipSharingResult;
 
   for (const row of ipSharing) {
     const cnt = parseInt(row.cnt, 10);
@@ -32,7 +33,7 @@ async function detectAnomalies(db, tenant) {
   }
 
   // b) Font Hash Clustering
-  const fontClusters = db.all(`
+  const fontClustersResult = await db.all(`
     SELECT font_hash,
            ${db.groupConcat('visitor_id')} as visitor_ids,
            COUNT(DISTINCT visitor_id) as cnt
@@ -42,6 +43,7 @@ async function detectAnomalies(db, tenant) {
     HAVING COUNT(DISTINCT visitor_id) > 1
     ORDER BY cnt DESC
   `, evP);
+  const fontClusters = fontClustersResult.rows || fontClustersResult;
 
   for (const row of fontClusters) {
     const cnt = parseInt(row.cnt, 10);
@@ -57,7 +59,7 @@ async function detectAnomalies(db, tenant) {
   }
 
   // c) WebGL Clustering
-  const webglClusters = db.all(`
+  const webglClustersResult = await db.all(`
     SELECT webgl_renderer_unmasked,
            ${db.groupConcat('visitor_id')} as visitor_ids,
            COUNT(DISTINCT visitor_id) as cnt
@@ -67,6 +69,7 @@ async function detectAnomalies(db, tenant) {
     HAVING COUNT(DISTINCT visitor_id) > 1
     ORDER BY cnt DESC
   `, evP);
+  const webglClusters = webglClustersResult.rows || webglClustersResult;
 
   for (const row of webglClusters) {
     const cnt = parseInt(row.cnt, 10);
@@ -85,16 +88,18 @@ async function detectAnomalies(db, tenant) {
   }
 
   // d) Rapid IP Change
-  const visitors = db.all(`SELECT DISTINCT visitor_id FROM events WHERE ${evW}`, evP);
+  const visitorsResult = await db.all(`SELECT DISTINCT visitor_id FROM events WHERE ${evW}`, evP);
+  const visitors = visitorsResult.rows || visitorsResult;
   const seenRapid = new Set();
 
   for (const { visitor_id } of visitors) {
     if (seenRapid.has(visitor_id)) continue;
-    const evts = db.all(`
+    const evtsResult = await db.all(`
       SELECT ip_address, timestamp FROM events
       WHERE visitor_id = ? AND ip_address IS NOT NULL AND ${evW}
       ORDER BY timestamp ASC
     `, [visitor_id, ...evP]);
+    const evts = evtsResult.rows || evtsResult;
 
     const TEN_MIN = 10 * 60 * 1000;
     let found = false;
@@ -131,13 +136,14 @@ async function detectAnomalies(db, tenant) {
   }
 
   // e) VM + MacIntel contradiction
-  const vmMac = db.all(`
+  const vmMacResult = await db.all(`
     SELECT DISTINCT visitor_id, webgl_renderer_unmasked, platform
     FROM events
     WHERE virtual_machine = 1 AND platform = 'MacIntel'
       AND webgl_renderer_unmasked LIKE '%Apple M%'
       AND ${evW}
   `, evP);
+  const vmMac = vmMacResult.rows || vmMacResult;
 
   for (const row of vmMac) {
     anomalies.push({
@@ -152,7 +158,7 @@ async function detectAnomalies(db, tenant) {
   }
 
   // f) Anti-detect cluster (by font_hash)
-  const antiDetectFont = db.all(`
+  const antiDetectFontResult = await db.all(`
     SELECT font_hash,
            ${db.groupConcat('visitor_id')} as visitor_ids,
            COUNT(DISTINCT visitor_id) as cnt
@@ -162,6 +168,7 @@ async function detectAnomalies(db, tenant) {
     HAVING COUNT(DISTINCT visitor_id) > 1
     ORDER BY cnt DESC
   `, evP);
+  const antiDetectFont = antiDetectFontResult.rows || antiDetectFontResult;
 
   for (const row of antiDetectFont) {
     const cnt = parseInt(row.cnt, 10);
@@ -177,7 +184,7 @@ async function detectAnomalies(db, tenant) {
   }
 
   // Anti-detect cluster by webgl
-  const antiDetectWebgl = db.all(`
+  const antiDetectWebglResult = await db.all(`
     SELECT webgl_renderer_unmasked,
            ${db.groupConcat('visitor_id')} as visitor_ids,
            COUNT(DISTINCT visitor_id) as cnt
@@ -189,6 +196,7 @@ async function detectAnomalies(db, tenant) {
     HAVING COUNT(DISTINCT visitor_id) > 1
     ORDER BY cnt DESC
   `, evP);
+  const antiDetectWebgl = antiDetectWebglResult.rows || antiDetectWebglResult;
 
   for (const row of antiDetectWebgl) {
     const cnt = parseInt(row.cnt, 10);
@@ -207,7 +215,7 @@ async function detectAnomalies(db, tenant) {
   }
 
   // g) Payment Sharing (card)
-  const cardSharing = db.all(`
+  const cardSharingResult = await db.all(`
     SELECT card_last4, card_bin,
            ${db.groupConcat('account_id')} as account_ids,
            COUNT(DISTINCT account_id) as cnt
@@ -217,6 +225,7 @@ async function detectAnomalies(db, tenant) {
     HAVING COUNT(DISTINCT account_id) > 1
     ORDER BY cnt DESC
   `, pmP);
+  const cardSharing = cardSharingResult.rows || cardSharingResult;
 
   for (const row of cardSharing) {
     const cnt = parseInt(row.cnt, 10);
@@ -232,7 +241,7 @@ async function detectAnomalies(db, tenant) {
   }
 
   // h) Payment Sharing (PayPal)
-  const paypalSharing = db.all(`
+  const paypalSharingResult = await db.all(`
     SELECT paypal_email,
            ${db.groupConcat('account_id')} as account_ids,
            COUNT(DISTINCT account_id) as cnt
@@ -242,6 +251,7 @@ async function detectAnomalies(db, tenant) {
     HAVING COUNT(DISTINCT account_id) > 1
     ORDER BY cnt DESC
   `, pmP);
+  const paypalSharing = paypalSharingResult.rows || paypalSharingResult;
 
   for (const row of paypalSharing) {
     const cnt = parseInt(row.cnt, 10);
