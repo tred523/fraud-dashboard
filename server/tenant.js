@@ -19,10 +19,10 @@ async function resolveTenant(req) {
     eventsParams: [],
     eventsCondA: '1=1',
     eventsCondB: '1=1',
-    acctWhere: 'api_key_id = ?',
-    acctParams: [id],
-    pmtWhere: isDemo ? '(api_key_id IS NULL OR api_key_id = ?)' : 'api_key_id = ?',
-    pmtParams: [id],
+    acctWhere: '1=1',
+    acctParams: [],
+    pmtWhere: '1=1',
+    pmtParams: [],
   };
 }
 

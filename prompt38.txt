@@ -1,0 +1,7 @@
+Critical fix: remove ALL references to api_key_id column from server/routes/overview.js completely. 
+
+The overview.js file has a getCount function on line 16 that uses api_key_id in a WHERE clause. Remove api_key_id filtering from ALL queries in overview.js. Just count all records without tenant filtering for now.
+
+Also check server/routes/events.js, server/routes/clusters.js, server/routes/visitor.js and remove any WHERE api_key_id = $1 clauses that might cause the same error.
+
+The fix is simple - just remove the api_key_id WHERE conditions from all queries in all route files.
