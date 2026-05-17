@@ -1,0 +1,5 @@
+Fix bot_sessions count in server/routes/overview.js.
+Currently it queries behavior_events table but that table is empty.
+Change the query to count from events table instead:
+SELECT COUNT(DISTINCT visitor_id) as count FROM events WHERE bot_probability > 50
+This will correctly show 2 bot sessions (visitors with bot_probability 90 and 75).
