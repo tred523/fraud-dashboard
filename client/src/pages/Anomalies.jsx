@@ -67,7 +67,7 @@ export default function Anomalies() {
                 </div>
 
                 {items.map((a, i) => (
-                  <div key={i} className="anomaly-card">
+                  <div key={i} className={`anomaly-card anomaly-card-${a.severity === 'HIGH' ? 'high' : a.severity === 'MEDIUM' ? 'medium' : 'low'}`}>
                     <div className="anomaly-card-top">
                       <div className="anomaly-title">{a.description}</div>
                       <span className={`badge badge-sev-${a.severity === 'HIGH' ? 'high' : 'medium'}`} style={{ flexShrink: 0 }}>

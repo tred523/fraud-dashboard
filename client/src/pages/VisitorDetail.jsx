@@ -439,32 +439,47 @@ export default function VisitorDetail() {
                 <span className="card-title">Account Activity</span>
                 <span style={{ fontSize: 12, color: 'var(--text3)' }}>{account_timeline.length} action{account_timeline.length !== 1 ? 's' : ''} via shared IP</span>
               </div>
-              <div style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div style={{ padding: '14px 14px 14px 38px', position: 'relative' }}>
+                <div style={{
+                  position: 'absolute', left: 25, top: 20, bottom: 20,
+                  width: 2, background: 'var(--border)', borderRadius: 1,
+                }} />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {account_timeline.map(ev => {
                   const meta = ev.metadata ? (() => { try { return JSON.parse(ev.metadata); } catch { return {}; } })() : {};
                   const metaSummary = Object.entries(meta).map(([k, v]) => `${k}: ${v}`).join(' · ');
                   return (
-                    <div key={ev.id} style={{
-                      padding: '10px 12px', background: 'var(--sidebar)', borderRadius: 6,
-                      border: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 4,
-                    }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span style={{
-                          fontSize: 10, fontWeight: 700, padding: '2px 6px', borderRadius: 3,
-                          background: 'var(--blue)', color: '#fff', letterSpacing: '0.05em',
-                        }}>
-                          {EVENT_ICONS[ev.event_type] || '◆'} {ev.event_type.replace(/_/g, ' ').toUpperCase()}
-                        </span>
-                        <span style={{ fontSize: 11, color: 'var(--text3)', marginLeft: 'auto' }}>{fmt(ev.timestamp)}</span>
-                      </div>
-                      <div style={{ display: 'flex', gap: 12, fontSize: 11, color: 'var(--text3)' }}>
-                        {ev.ip_address && <span className="mono">{ev.ip_address}</span>}
-                        <span style={{ color: 'var(--text2)' }}>{ev.account_id}</span>
-                        {metaSummary && <span>{metaSummary}</span>}
+                    <div key={ev.id} style={{ position: 'relative' }}>
+                      <div style={{
+                        position: 'absolute', left: -21, top: 13,
+                        width: 10, height: 10, borderRadius: '50%',
+                        background: 'var(--blue)', border: '2px solid var(--sidebar)',
+                        zIndex: 1, boxShadow: '0 0 0 3px rgba(59,130,246,.15)',
+                      }} />
+                      <div style={{
+                        padding: '10px 12px', background: 'var(--sidebar)', borderRadius: 6,
+                        border: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 4,
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <span style={{ fontSize: 15 }}>{EVENT_ICONS[ev.event_type] || '◆'}</span>
+                          <span style={{
+                            fontSize: 11, fontWeight: 700, color: 'var(--text)',
+                            letterSpacing: '0.03em',
+                          }}>
+                            {ev.event_type.replace(/_/g, ' ').toUpperCase()}
+                          </span>
+                          <span style={{ fontSize: 11, color: 'var(--text3)', marginLeft: 'auto' }}>{fmt(ev.timestamp)}</span>
+                        </div>
+                        <div style={{ display: 'flex', gap: 12, fontSize: 11, color: 'var(--text3)' }}>
+                          {ev.ip_address && <span className="mono">{ev.ip_address}</span>}
+                          <span style={{ color: 'var(--text2)' }}>{ev.account_id}</span>
+                          {metaSummary && <span>{metaSummary}</span>}
+                        </div>
                       </div>
                     </div>
                   );
                 })}
+                </div>
               </div>
             </div>
           )}

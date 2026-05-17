@@ -1,0 +1,43 @@
+Redesign FraudShield dashboard with a professional, modern look similar to Linear or Vercel. Keep dark theme but make it polished and premium.
+
+1. Login page:
+- Centered card with FraudShield logo (shield icon)
+- Clean input field with label
+- Primary button with hover effect
+- Subtle background pattern or gradient
+
+2. Sidebar:
+- Slightly lighter dark background than main content
+- Active item has accent color highlight (blue or indigo)
+- Icons for each nav item
+- FraudShield logo at top with shield emoji
+- Bottom section: show logged-in client name and API key (truncated)
+
+3. Overview page:
+- Metric cards with subtle borders and hover effects
+- Color-coded numbers (red for AT RISK, orange for suspicious)
+- Events table with alternating row backgrounds
+- Risk score badges more polished - pill shape with color
+- Flag badges smaller and cleaner
+- Add "last updated" timestamp
+
+4. Visitor Detail:
+- Better organized sections with clear headings
+- Verdict badge larger and more prominent at top
+- Timeline with proper icons and connecting line
+- Device fingerprint in a clean grid layout
+
+5. Anomalies page:
+- Each anomaly card with left border color by severity
+- Better spacing and typography
+
+6. Graph page:
+- Add subtle grid background
+- Better node labels
+
+7. General:
+- Use Inter or system font stack
+- Consistent border radius (6-8px)
+- Subtle box shadows on cards
+- Smooth hover transitions (0.15s)
+- Better color palette: background #0f1117, surface #1a1d27, border #2a2d3a

@@ -17,8 +17,8 @@ export default function VerdictBadge({ verdict, score, size = 'sm' }) {
     <span style={{
       display: 'inline-flex', alignItems: 'center', gap: lg ? 8 : 4,
       background: s.bg, color: s.color, border: `1px solid ${s.border}`,
-      borderRadius: lg ? 8 : 4,
-      padding: lg ? '6px 16px' : '2px 7px',
+      borderRadius: lg ? 12 : 20,
+      padding: lg ? '6px 18px' : '3px 9px',
       fontSize: lg ? 18 : 11,
       fontWeight: 700, letterSpacing: '0.06em',
       whiteSpace: 'nowrap',

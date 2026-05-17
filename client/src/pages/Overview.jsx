@@ -74,6 +74,12 @@ export default function Overview() {
           </div>
           <p className="page-subtitle">Real-time fraud detection across all events</p>
         </div>
+        <div style={{ fontSize: 11, color: 'var(--text4)', textAlign: 'right', flexShrink: 0 }}>
+          <div style={{ marginBottom: 2 }}>Last updated</div>
+          <div style={{ color: 'var(--text3)', fontWeight: 500 }}>
+            {overview?.last_webhook_at ? fmt(overview.last_webhook_at) : '—'}
+          </div>
+        </div>
       </div>
 
       {/* Metric Cards */}

@@ -74,7 +74,7 @@ export default function Graph() {
 
   const nodeColor     = useCallback((node) => RISK_COLORS[node.riskLevel] || '#64748b', []);
   const nodeVal       = useCallback((node) => Math.max(1, Math.min(node.eventCount, 30)), []);
-  const nodeLabel     = useCallback((node) => `${node.id}  |  ${node.riskLevel}  |  ${node.eventCount} events`, []);
+  const nodeLabel     = useCallback((node) => `${node.id.substring(0, 20)}…  ·  ${node.riskLevel}  ·  ${node.eventCount} event${node.eventCount !== 1 ? 's' : ''}`, []);
   const linkColor     = useCallback((link) => LINK_COLORS[link.type] || '#64748b', []);
 
   const linkCanvasObject = useCallback((link, ctx, globalScale) => {
@@ -154,7 +154,7 @@ export default function Graph() {
         {/* Graph canvas */}
         <div
           ref={containerRef}
-          className="card"
+          className="card graph-canvas-wrap"
           style={{ flex: 1, minWidth: 0, overflow: 'hidden', padding: 0 }}
         >
           {graphData.nodes.length === 0 ? (
@@ -167,7 +167,7 @@ export default function Graph() {
               graphData={graphData}
               width={canvasSize.width}
               height={canvasSize.height}
-              backgroundColor="#1a1d27"
+              backgroundColor="rgba(0,0,0,0)"
               nodeColor={nodeColor}
               nodeVal={nodeVal}
               nodeLabel={nodeLabel}

@@ -59,7 +59,10 @@
       "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('events:', d['total']\\)\")",
       "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('no key:', d\\)\")",
       "PowerShell(Start-Process -NoNewWindow -FilePath \"node\" -ArgumentList \"C:\\\\Projects\\\\fraud-dashboard\\\\server\\\\index.js\" -RedirectStandardOutput \"C:\\\\Projects\\\\fraud-dashboard\\\\server.log\" -RedirectStandardError \"C:\\\\Projects\\\\fraud-dashboard\\\\server.err\"; Start-Sleep -Seconds 3; Write-Host \"Server started\")",
-      "PowerShell(Start-Process \"http://localhost:3001\")"
+      "PowerShell(Start-Process \"http://localhost:3001\")",
+      "PowerShell(Get-ChildItem -Path \"C:\\\\Projects\\\\fraud-dashboard\\\\client\" -Recurse -File | Where-Object {$_.Extension -in @\\('.jsx', '.js', '.tsx', '.ts', '.css', '.scss'\\)} | Select-Object FullName | Sort-Object FullName)",
+      "Bash(grep -E \"\\\\.\\(jsx|tsx\\)$\")",
+      "PowerShell(Start-Process powershell -ArgumentList \"-NoExit\", \"-Command\", \"Set-Location 'C:\\\\Projects\\\\fraud-dashboard\\\\client'; node node_modules\\\\.bin\\\\vite\" -WindowStyle Minimized)"
     ]
   }
 }
