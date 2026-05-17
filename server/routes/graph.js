@@ -12,39 +12,43 @@ router.get('/', async (req, res) => {
   const { eventsWhere, eventsParams, eventsCondA, eventsCondB, acctWhere, acctParams, pmtWhere, pmtParams } = tenant;
   const evId = tenant.tenantId;
 
-  const nodes = db.all(`
+  const nodesResult = await db.all(`
     SELECT visitor_id, risk_level, COUNT(*) as event_count
     FROM events
     WHERE ${eventsWhere}
     GROUP BY visitor_id, risk_level
   `, eventsParams);
+  const nodes = Array.isArray(nodesResult) ? nodesResult : (nodesResult.rows || []);
 
-  const ipLinks = db.all(`
+  const ipLinksResult = await db.all(`
     SELECT DISTINCT a.visitor_id as source, b.visitor_id as target
     FROM events a
     JOIN events b ON a.ip_address = b.ip_address AND a.visitor_id < b.visitor_id
     WHERE a.ip_address IS NOT NULL AND a.ip_address != ''
     AND ${eventsCondA} AND ${eventsCondB}
-  `, [evId, evId]).map(l => ({ ...l, type: 'IP' }));
+  `, []);
+  const ipLinks = (Array.isArray(ipLinksResult) ? ipLinksResult : (ipLinksResult.rows || [])).map(l => ({ ...l, type: 'IP' }));
 
-  const fontLinks = db.all(`
+  const fontLinksResult = await db.all(`
     SELECT DISTINCT a.visitor_id as source, b.visitor_id as target
     FROM events a
     JOIN events b ON a.font_hash = b.font_hash AND a.visitor_id < b.visitor_id
     WHERE a.font_hash IS NOT NULL AND a.font_hash != ''
     AND ${eventsCondA} AND ${eventsCondB}
-  `, [evId, evId]).map(l => ({ ...l, type: 'Font' }));
+  `, []);
+  const fontLinks = (Array.isArray(fontLinksResult) ? fontLinksResult : (fontLinksResult.rows || [])).map(l => ({ ...l, type: 'Font' }));
 
-  const gpuLinks = db.all(`
+  const gpuLinksResult = await db.all(`
     SELECT DISTINCT a.visitor_id as source, b.visitor_id as target
     FROM events a
     JOIN events b ON a.webgl_renderer_unmasked = b.webgl_renderer_unmasked AND a.visitor_id < b.visitor_id
     WHERE a.webgl_renderer_unmasked IS NOT NULL AND a.webgl_renderer_unmasked != ''
     AND ${eventsCondA} AND ${eventsCondB}
-  `, [evId, evId]).map(l => ({ ...l, type: 'GPU' }));
+  `, []);
+  const gpuLinks = (Array.isArray(gpuLinksResult) ? gpuLinksResult : (gpuLinksResult.rows || [])).map(l => ({ ...l, type: 'GPU' }));
 
   const pmtCondPs1 = tenant.isDemo ? '(ps1.api_key_id IS NULL OR ps1.api_key_id = ?)' : 'ps1.api_key_id = ?';
-  const paymentLinks = db.all(`
+  const paymentLinksRaw = await db.all(`
     SELECT DISTINCT
       CASE WHEN a.visitor_id < b.visitor_id THEN a.visitor_id ELSE b.visitor_id END as source,
       CASE WHEN a.visitor_id < b.visitor_id THEN b.visitor_id ELSE a.visitor_id END as target
@@ -59,7 +63,8 @@ router.get('/', async (req, res) => {
     JOIN events a ON a.ip_address = ae1.ip_address AND ${eventsCondA}
     JOIN events b ON b.ip_address = ae2.ip_address AND ${eventsCondB}
     WHERE a.visitor_id != b.visitor_id AND ${pmtCondPs1}
-  `, [evId, evId, evId, evId, evId]).map(l => ({ ...l, type: 'Payment' }));
+  `, [evId, evId, evId]);
+  const paymentLinks = (Array.isArray(paymentLinksRaw) ? paymentLinksRaw : (paymentLinksRaw.rows || [])).map(l => ({ ...l, type: 'Payment' }));
 
   res.json({
     nodes: nodes.map(n => ({

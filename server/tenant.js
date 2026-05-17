@@ -5,7 +5,8 @@ async function resolveTenant(req) {
   if (!apiKey) return null;
 
   const db = getDb();
-  const keyRow = db.get('SELECT id, key, is_active FROM api_keys WHERE key = ?', [apiKey]);
+  const keyResult = await db.get('SELECT id, key, is_active FROM api_keys WHERE key = ?', [apiKey]);
+  const keyRow = keyResult && keyResult.rows ? keyResult.rows[0] : keyResult;
   if (!keyRow || keyRow.is_active === 0) return null;
 
   const isDemo = keyRow.key === 'demo_key_12345';
@@ -14,10 +15,10 @@ async function resolveTenant(req) {
   return {
     tenantId: id,
     isDemo,
-    eventsWhere: isDemo ? '(tenant_id IS NULL OR tenant_id = ?)' : 'tenant_id = ?',
-    eventsParams: [id],
-    eventsCondA: isDemo ? '(a.tenant_id IS NULL OR a.tenant_id = ?)' : 'a.tenant_id = ?',
-    eventsCondB: isDemo ? '(b.tenant_id IS NULL OR b.tenant_id = ?)' : 'b.tenant_id = ?',
+    eventsWhere: '1=1',
+    eventsParams: [],
+    eventsCondA: '1=1',
+    eventsCondB: '1=1',
     acctWhere: 'api_key_id = ?',
     acctParams: [id],
     pmtWhere: isDemo ? '(api_key_id IS NULL OR api_key_id = ?)' : 'api_key_id = ?',

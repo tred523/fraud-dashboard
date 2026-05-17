@@ -86,7 +86,8 @@ router.post('/fingerprint', async (req, res) => {
   const apiKey = req.headers['x-api-key'] || req.query.api_key;
   if (apiKey) {
     const db = getDb();
-    const keyRow = db.get('SELECT id FROM api_keys WHERE key = ? AND is_active = 1', [apiKey]);
+    const keyResult = await db.get('SELECT id FROM api_keys WHERE key = ? AND is_active = 1', [apiKey]);
+    const keyRow = keyResult && keyResult.rows ? keyResult.rows[0] : keyResult;
     if (keyRow) tenantId = keyRow.id;
   }
 

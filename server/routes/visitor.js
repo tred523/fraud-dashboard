@@ -12,10 +12,11 @@ router.get('/:visitorId', async (req, res) => {
   const { visitorId } = req.params;
   const { eventsWhere, eventsParams, acctWhere, acctParams, pmtWhere, pmtParams } = tenant;
 
-  const events = db.all(
+  const eventsResult = await db.all(
     `SELECT * FROM events WHERE visitor_id = ? AND ${eventsWhere} ORDER BY timestamp ASC`,
     [visitorId, ...eventsParams]
   );
+  const events = Array.isArray(eventsResult) ? eventsResult : (eventsResult.rows || []);
 
   if (events.length === 0) return res.status(404).json({ error: 'Visitor not found' });
 
@@ -25,20 +26,23 @@ router.get('/:visitorId', async (req, res) => {
 
   const ph = (arr) => arr.map(() => '?').join(',');
 
-  const byIp = ips.length
-    ? db.all(`SELECT DISTINCT visitor_id, ip_address FROM events WHERE ip_address IN (${ph(ips)}) AND visitor_id != ? AND ${eventsWhere}`, [...ips, visitorId, ...eventsParams])
+  const byIpResult = ips.length
+    ? await db.all(`SELECT DISTINCT visitor_id, ip_address FROM events WHERE ip_address IN (${ph(ips)}) AND visitor_id != ? AND ${eventsWhere}`, [...ips, visitorId, ...eventsParams])
     : [];
+  const byIp = Array.isArray(byIpResult) ? byIpResult : (byIpResult.rows || []);
 
-  const byFont = fonts.length
-    ? db.all(`SELECT DISTINCT visitor_id, font_hash FROM events WHERE font_hash IN (${ph(fonts)}) AND visitor_id != ? AND ${eventsWhere}`, [...fonts, visitorId, ...eventsParams])
+  const byFontResult = fonts.length
+    ? await db.all(`SELECT DISTINCT visitor_id, font_hash FROM events WHERE font_hash IN (${ph(fonts)}) AND visitor_id != ? AND ${eventsWhere}`, [...fonts, visitorId, ...eventsParams])
     : [];
+  const byFont = Array.isArray(byFontResult) ? byFontResult : (byFontResult.rows || []);
 
-  const byWebgl = webgls.length
-    ? db.all(`SELECT DISTINCT visitor_id, webgl_renderer_unmasked FROM events WHERE webgl_renderer_unmasked IN (${ph(webgls)}) AND visitor_id != ? AND ${eventsWhere}`, [...webgls, visitorId, ...eventsParams])
+  const byWebglResult = webgls.length
+    ? await db.all(`SELECT DISTINCT visitor_id, webgl_renderer_unmasked FROM events WHERE webgl_renderer_unmasked IN (${ph(webgls)}) AND visitor_id != ? AND ${eventsWhere}`, [...webgls, visitorId, ...eventsParams])
     : [];
+  const byWebgl = Array.isArray(byWebglResult) ? byWebglResult : (byWebglResult.rows || []);
 
-  const accountTimeline = ips.length
-    ? db.all(
+  const accountTimelineResult = ips.length
+    ? await db.all(
         `SELECT ae.*, ak.client_name FROM account_events ae
          JOIN api_keys ak ON ae.api_key_id = ak.id
          WHERE ae.ip_address IN (${ph(ips)}) AND ae.${acctWhere}
@@ -46,33 +50,37 @@ router.get('/:visitorId', async (req, res) => {
         [...ips, ...acctParams]
       )
     : [];
+  const accountTimeline = Array.isArray(accountTimelineResult) ? accountTimelineResult : (accountTimelineResult.rows || []);
 
-  const behavior = db.all(
+  const behaviorResult = await db.all(
     `SELECT * FROM behavior_events WHERE visitor_id = ? AND ${acctWhere} ORDER BY collected_at DESC LIMIT 20`,
     [visitorId, ...acctParams]
   );
+  const behavior = Array.isArray(behaviorResult) ? behaviorResult : (behaviorResult.rows || []);
 
-  const linkedAccountIds = ips.length
-    ? [...new Set(
-        db.all(`SELECT DISTINCT account_id FROM account_events WHERE ip_address IN (${ph(ips)}) AND ${acctWhere}`, [...ips, ...acctParams]).map(r => r.account_id)
-      )]
+  const linkedAccountIdsResult = ips.length
+    ? await db.all(`SELECT DISTINCT account_id FROM account_events WHERE ip_address IN (${ph(ips)}) AND ${acctWhere}`, [...ips, ...acctParams])
     : [];
+  const linkedAccountIdsRows = Array.isArray(linkedAccountIdsResult) ? linkedAccountIdsResult : (linkedAccountIdsResult.rows || []);
+  const linkedAccountIds = [...new Set(linkedAccountIdsRows.map(r => r.account_id))];
 
-  const linkedPayments = linkedAccountIds.length
-    ? db.all(
+  const linkedPaymentsResult = linkedAccountIds.length
+    ? await db.all(
         `SELECT account_id, card_last4, card_bin, bank_name, card_type, is_prepaid, is_virtual, created_at as timestamp
          FROM payment_signals WHERE account_id IN (${ph(linkedAccountIds)}) AND ${pmtWhere} ORDER BY created_at DESC`,
         [...linkedAccountIds, ...pmtParams]
       )
     : [];
+  const linkedPayments = Array.isArray(linkedPaymentsResult) ? linkedPaymentsResult : (linkedPaymentsResult.rows || []);
 
   let paymentData = { methods: [], is_shared: false };
   if (linkedAccountIds.length > 0) {
     const phAcc = linkedAccountIds.map(() => '?').join(',');
-    const signals = db.all(
+    const signalsResult = await db.all(
       `SELECT * FROM payment_signals WHERE account_id IN (${phAcc}) AND ${pmtWhere} ORDER BY created_at DESC`,
       [...linkedAccountIds, ...pmtParams]
     );
+    const signals = Array.isArray(signalsResult) ? signalsResult : (signalsResult.rows || []);
 
     const seen = new Set();
     const methods = [];
@@ -83,15 +91,17 @@ router.get('/:visitorId', async (req, res) => {
 
       let linked = [];
       if (sig.paypal_email) {
-        linked = db.all(
+        const lr = await db.all(
           `SELECT DISTINCT account_id FROM payment_signals WHERE paypal_email = ? AND account_id != ? AND ${pmtWhere}`,
           [sig.paypal_email, sig.account_id, ...pmtParams]
-        ).map(r => r.account_id);
+        );
+        linked = (Array.isArray(lr) ? lr : (lr.rows || [])).map(r => r.account_id);
       } else if (sig.card_last4 && sig.card_bin) {
-        linked = db.all(
+        const lr = await db.all(
           `SELECT DISTINCT account_id FROM payment_signals WHERE card_last4 = ? AND card_bin = ? AND account_id != ? AND ${pmtWhere}`,
           [sig.card_last4, sig.card_bin, sig.account_id, ...pmtParams]
-        ).map(r => r.account_id);
+        );
+        linked = (Array.isArray(lr) ? lr : (lr.rows || [])).map(r => r.account_id);
       }
 
       methods.push({ ...sig, linked_accounts: linked });

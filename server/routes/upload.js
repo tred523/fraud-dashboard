@@ -12,7 +12,8 @@ router.post('/', upload.single('file'), async (req, res) => {
   if (!apiKey) return res.status(400).json({ error: 'api_key is required' });
 
   const db = getDb();
-  const keyRow = db.get('SELECT id, is_active FROM api_keys WHERE key = ?', [apiKey]);
+  const keyResult = await db.get('SELECT id, is_active FROM api_keys WHERE key = ?', [apiKey]);
+  const keyRow = keyResult && keyResult.rows ? keyResult.rows[0] : keyResult;
   if (!keyRow || keyRow.is_active === 0) return res.status(401).json({ error: 'Invalid API key' });
 
   try {

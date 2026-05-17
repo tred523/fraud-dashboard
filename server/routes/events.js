@@ -26,12 +26,14 @@ router.get('/', async (req, res) => {
 
   const where = `WHERE ${conditions.join(' AND ')}`;
 
-  const events = db.all(
+  const eventsResult = await db.all(
     `SELECT * FROM events ${where} ORDER BY timestamp DESC LIMIT ? OFFSET ?`,
     [...params, parseInt(limit), parseInt(offset)]
   );
+  const events = Array.isArray(eventsResult) ? eventsResult : (eventsResult.rows || []);
 
-  const row = db.get(`SELECT COUNT(*) as c FROM events ${where}`, params);
+  const countResult = await db.get(`SELECT COUNT(*) as c FROM events ${where}`, params);
+  const row = countResult && countResult.rows ? countResult.rows[0] : countResult;
   const total = parseInt(row.c, 10);
 
   res.json({ events, total });
@@ -42,10 +44,11 @@ router.get('/countries', async (req, res) => {
   if (!tenant) return res.status(401).json({ error: 'API key required' });
 
   const db = getDb();
-  const rows = db.all(
+  const result = await db.all(
     `SELECT DISTINCT country_code FROM events WHERE country_code IS NOT NULL AND ${tenant.eventsWhere} ORDER BY country_code`,
     tenant.eventsParams
   );
+  const rows = Array.isArray(result) ? result : (result.rows || []);
   res.json(rows.map(r => r.country_code));
 });
 

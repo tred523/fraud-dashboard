@@ -10,17 +10,16 @@ async function getPaymentData(db, events, tenant) {
   if (ips.length === 0) return { is_shared: false, methods: [] };
 
   const ph = ips.map(() => '?').join(',');
-  const linkedAccountIds = [...new Set(
-    db.all(`SELECT DISTINCT account_id FROM account_events WHERE ip_address IN (${ph}) AND ${tenant.acctWhere}`, [...ips, ...tenant.acctParams])
-      .map(r => r.account_id)
-  )];
+  const acctResult = await db.all(`SELECT DISTINCT account_id FROM account_events WHERE ip_address IN (${ph}) AND ${tenant.acctWhere}`, [...ips, ...tenant.acctParams]);
+  const linkedAccountIds = [...new Set((Array.isArray(acctResult) ? acctResult : (acctResult.rows || [])).map(r => r.account_id))];
   if (linkedAccountIds.length === 0) return { is_shared: false, methods: [] };
 
   const phAcc = linkedAccountIds.map(() => '?').join(',');
-  const signals = db.all(
+  const sigResult = await db.all(
     `SELECT * FROM payment_signals WHERE account_id IN (${phAcc}) AND ${tenant.pmtWhere}`,
     [...linkedAccountIds, ...tenant.pmtParams]
   );
+  const signals = Array.isArray(sigResult) ? sigResult : (sigResult.rows || []);
 
   const seen = new Set();
   const methods = [];
@@ -33,15 +32,17 @@ async function getPaymentData(db, events, tenant) {
 
     let linked = [];
     if (sig.paypal_email) {
-      linked = db.all(
+      const lr = await db.all(
         `SELECT DISTINCT account_id FROM payment_signals WHERE paypal_email = ? AND account_id != ? AND ${tenant.pmtWhere}`,
         [sig.paypal_email, sig.account_id, ...tenant.pmtParams]
       );
+      linked = Array.isArray(lr) ? lr : (lr.rows || []);
     } else if (sig.card_last4 && sig.card_bin) {
-      linked = db.all(
+      const lr = await db.all(
         `SELECT DISTINCT account_id FROM payment_signals WHERE card_last4 = ? AND card_bin = ? AND account_id != ? AND ${tenant.pmtWhere}`,
         [sig.card_last4, sig.card_bin, sig.account_id, ...tenant.pmtParams]
       );
+      linked = Array.isArray(lr) ? lr : (lr.rows || []);
     }
     if (linked.length > 0) is_shared = true;
     methods.push({
@@ -64,14 +65,17 @@ router.get('/batch', async (req, res) => {
   if (ids.length === 0) return res.json({});
 
   const ph = ids.map(() => '?').join(',');
-  const allEvents = db.all(
+  const allEventsResult = await db.all(
     `SELECT * FROM events WHERE visitor_id IN (${ph}) AND ${tenant.eventsWhere} ORDER BY visitor_id, timestamp ASC`,
     [...ids, ...tenant.eventsParams]
   );
-  const allBehavior = db.all(
+  const allEvents = Array.isArray(allEventsResult) ? allEventsResult : (allEventsResult.rows || []);
+
+  const allBehaviorResult = await db.all(
     `SELECT * FROM behavior_events WHERE visitor_id IN (${ph}) AND ${tenant.acctWhere}`,
     [...ids, ...tenant.acctParams]
   );
+  const allBehavior = Array.isArray(allBehaviorResult) ? allBehaviorResult : (allBehaviorResult.rows || []);
 
   const eventsByVisitor = {};
   const behaviorByVisitor = {};
@@ -99,16 +103,18 @@ router.get('/:visitorId', async (req, res) => {
   const db = getDb();
   const { visitorId } = req.params;
 
-  const events = db.all(
+  const eventsResult = await db.all(
     `SELECT * FROM events WHERE visitor_id = ? AND ${tenant.eventsWhere} ORDER BY timestamp ASC`,
     [visitorId, ...tenant.eventsParams]
   );
+  const events = Array.isArray(eventsResult) ? eventsResult : (eventsResult.rows || []);
   if (events.length === 0) return res.status(404).json({ error: 'Visitor not found' });
 
-  const behavior = db.all(
+  const behaviorResult = await db.all(
     `SELECT * FROM behavior_events WHERE visitor_id = ? AND ${tenant.acctWhere} ORDER BY collected_at DESC`,
     [visitorId, ...tenant.acctParams]
   );
+  const behavior = Array.isArray(behaviorResult) ? behaviorResult : (behaviorResult.rows || []);
 
   const paymentData = await getPaymentData(db, events, tenant);
   const verdict = calculateVerdict(events, behavior, paymentData);

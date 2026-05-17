@@ -5,7 +5,7 @@ const { resolveTenant } = require('../tenant');
 const router = express.Router();
 
 async function clusterQuery(db, groupCol, type, eventsWhere, eventsParams) {
-  const rows = db.all(`
+  const result = await db.all(`
     SELECT ${groupCol} as value,
            '${type}' as type,
            COUNT(DISTINCT visitor_id) as visitor_count,
@@ -18,6 +18,7 @@ async function clusterQuery(db, groupCol, type, eventsWhere, eventsParams) {
     GROUP BY ${groupCol}
     ORDER BY visitor_count DESC, event_count DESC
   `, eventsParams);
+  const rows = Array.isArray(result) ? result : (result.rows || []);
   return rows.map(r => ({
     ...r,
     visitor_count: parseInt(r.visitor_count, 10),

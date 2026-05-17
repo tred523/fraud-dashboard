@@ -1,0 +1,17 @@
+Fix critical PostgreSQL compatibility issues across all server files.
+
+The main problems:
+1. column "tenant_id" does not exist in events table
+2. All db.all() and db.get() calls return {rows: [...]} in PostgreSQL but code expects plain arrays
+
+Fix ALL files in server/routes/ (events.js, overview.js, anomalies.js, visitor.js, clusters.js, upload.js, ingest.js, webhook.js, accounts.js, verdict.js):
+- Every db.all() result: use const result = await db.all(q); const rows = Array.isArray(result) ? result : (result.rows || []);
+- Every db.get() result: use const result = await db.get(q); const row = result && result.rows ? result.rows[0] : result;
+
+Also in server/db-postgres.js:
+- Add ALTER TABLE IF EXISTS events ADD COLUMN IF NOT EXISTS tenant_id INTEGER;
+- Add ALTER TABLE IF EXISTS account_events ADD COLUMN IF NOT EXISTS tenant_id INTEGER;
+- Add ALTER TABLE IF EXISTS payment_signals ADD COLUMN IF NOT EXISTS tenant_id INTEGER;
+- Add ALTER TABLE IF EXISTS behavior_events ADD COLUMN IF NOT EXISTS tenant_id INTEGER;
+
+Remove tenant_id from all WHERE clauses for now - filter by api_key instead where needed.
