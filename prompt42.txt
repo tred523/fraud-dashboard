@@ -1,0 +1,32 @@
+Add account labeling system to FraudShield. Users should be able to add custom labels/notes to any visitor_id.
+
+1. Create new PostgreSQL table: visitor_labels
+   - id SERIAL PRIMARY KEY
+   - visitor_id VARCHAR(255) NOT NULL
+   - label VARCHAR(255) (e.g. "John Smith", "Suspect #1", "VIP Customer")
+   - category VARCHAR(50) (e.g. "suspect", "trusted", "vip", "blocked", "investigating")
+   - notes TEXT (free text notes)
+   - created_at TIMESTAMP DEFAULT NOW()
+   - updated_at TIMESTAMP DEFAULT NOW()
+   - UNIQUE(visitor_id)
+
+2. Create API endpoints:
+   - GET /api/labels/:visitor_id - get label for visitor
+   - POST /api/labels/:visitor_id - create or update label { label, category, notes }
+   - DELETE /api/labels/:visitor_id - remove label
+
+3. In VisitorDetail.jsx add label editing:
+   - Show current label/category at top of page next to visitor_id
+   - Small edit button (pencil icon) opens inline edit form
+   - Fields: Name/Label (text), Category (dropdown: suspect/trusted/vip/blocked/investigating), Notes (textarea)
+   - Save button - updates via API without page reload
+   - Category shown as colored badge: suspect=red, trusted=green, vip=gold, blocked=dark red, investigating=orange
+
+4. In Overview page events table:
+   - Add Label column showing the label name if exists
+   - If no label - show visitor_id truncated as before
+   - Category badge shown as small colored dot before the label
+
+5. Make sure to use ALTER TABLE IF NOT EXISTS and INSERT ... ON CONFLICT DO UPDATE for upsert to avoid errors with existing data
+
+6. Do NOT modify any existing tables or seed data

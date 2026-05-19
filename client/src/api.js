@@ -40,6 +40,28 @@ export function fetchEvents(filters = {}) {
 export const fetchVerdict      = (id)  => get(`/verdict/${encodeURIComponent(id)}`);
 export const fetchVerdictBatch = (ids) => get(`/verdict/batch?ids=${ids.map(encodeURIComponent).join(',')}`);
 
+export const fetchLabel      = (id)  => get(`/labels/${encodeURIComponent(id)}`);
+export const fetchLabelsBatch = (ids) => ids.length ? get(`/labels?ids=${ids.map(encodeURIComponent).join(',')}`) : Promise.resolve({});
+
+export async function saveLabel(visitorId, data) {
+  const r = await fetch(`${BASE}/labels/${encodeURIComponent(visitorId)}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-API-Key': getApiKey() },
+    body: JSON.stringify(data),
+  });
+  if (!r.ok) throw new Error(await r.text());
+  return r.json();
+}
+
+export async function deleteLabel(visitorId) {
+  const r = await fetch(`${BASE}/labels/${encodeURIComponent(visitorId)}`, {
+    method: 'DELETE',
+    headers: { 'X-API-Key': getApiKey() },
+  });
+  if (!r.ok) throw new Error(await r.text());
+  return r.json();
+};
+
 export const fetchAccounts      = ()   => get('/accounts');
 export const fetchAccountDetail = (id) => get(`/accounts/${encodeURIComponent(id)}`);
 

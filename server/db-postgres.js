@@ -172,6 +172,18 @@ async function initDb() {
     )
   `);
 
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS visitor_labels (
+      id SERIAL PRIMARY KEY,
+      visitor_id VARCHAR(255) NOT NULL UNIQUE,
+      label VARCHAR(255),
+      category VARCHAR(50),
+      notes TEXT,
+      created_at TIMESTAMP DEFAULT NOW(),
+      updated_at TIMESTAMP DEFAULT NOW()
+    )
+  `);
+
   await pool.query(
     `INSERT INTO api_keys (key, client_name, created_at) VALUES ('demo_key_12345', 'Demo Client', $1) ON CONFLICT (key) DO NOTHING`,
     [Date.now()]

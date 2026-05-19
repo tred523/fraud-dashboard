@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts';
-import { fetchVisitor, fetchVerdict } from '../api';
+import { fetchVisitor, fetchVerdict, fetchLabel, saveLabel, deleteLabel } from '../api';
 import RiskBadge, { riskColor } from '../components/RiskBadge';
 import Flags, { FlagExplanations } from '../components/Flags';
 import VerdictBadge, { verdictColor } from '../components/VerdictBadge';
@@ -667,6 +667,14 @@ function UnifiedTimeline({ events, account_timeline, behavior }) {
   );
 }
 
+const CATEGORY_COLORS = {
+  suspect:       '#ef4444',
+  trusted:       '#22c55e',
+  vip:           '#f59e0b',
+  blocked:       '#991b1b',
+  investigating: '#f97316',
+};
+
 export default function VisitorDetail() {
   const { id } = useParams();
   const [data, setData] = useState(null);
@@ -674,17 +682,43 @@ export default function VisitorDetail() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('overview');
+  const [label, setLabel] = useState(null);
+  const [editingLabel, setEditingLabel] = useState(false);
+  const [labelForm, setLabelForm] = useState({ label: '', category: '', notes: '' });
 
   useEffect(() => {
     setLoading(true);
     setError(null);
     setVerdict(null);
+    setLabel(null);
+    setEditingLabel(false);
     fetchVisitor(id)
       .then(setData)
       .catch(e => setError(e.message))
       .finally(() => setLoading(false));
     fetchVerdict(id).then(setVerdict).catch(() => {});
+    fetchLabel(id).then(setLabel).catch(() => {});
   }, [id]);
+
+  async function handleSaveLabel() {
+    try {
+      const updated = await saveLabel(id, labelForm);
+      setLabel(updated);
+      setEditingLabel(false);
+    } catch (e) {
+      console.error('Failed to save label', e);
+    }
+  }
+
+  async function handleDeleteLabel() {
+    try {
+      await deleteLabel(id);
+      setLabel(null);
+      setEditingLabel(false);
+    } catch (e) {
+      console.error('Failed to delete label', e);
+    }
+  }
 
   if (loading) return <div className="loading">Loading visitor data…</div>;
   if (error)   return <div className="page"><div className="empty-state"><div className="empty-icon">⚠️</div><div className="empty-text">{error}</div></div></div>;
@@ -732,14 +766,76 @@ export default function VisitorDetail() {
       <Link to="/" className="back-link">← Back to Overview</Link>
 
       <div className="page-header">
-        <div>
-          <h1 className="page-title" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div style={{ flex: 1 }}>
+          <h1 className="page-title" style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
             <span className="mono" style={{ fontSize: 16, color: 'var(--text2)' }}>{id}</span>
             <RiskBadge level={maxRiskLevel} />
+            {label?.label && (
+              <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text1)' }}>{label.label}</span>
+            )}
+            {label?.category && (
+              <span style={{
+                fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 3,
+                background: (CATEGORY_COLORS[label.category] || '#64748b') + '22',
+                color: CATEGORY_COLORS[label.category] || '#64748b',
+              }}>
+                {label.category.toUpperCase()}
+              </span>
+            )}
+            <button
+              title="Edit label"
+              onClick={() => {
+                setEditingLabel(e => !e);
+                setLabelForm({ label: label?.label || '', category: label?.category || '', notes: label?.notes || '' });
+              }}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text3)', fontSize: 13, padding: '2px 4px', lineHeight: 1 }}
+            >
+              ✏
+            </button>
           </h1>
           <p className="page-subtitle">
             {events.length} event{events.length !== 1 ? 's' : ''} · first seen {fmt(events[0]?.timestamp)} · last seen {fmt(events[events.length - 1]?.timestamp)}
           </p>
+          {editingLabel && (
+            <div style={{
+              marginTop: 10, padding: '12px 14px', background: 'var(--sidebar)',
+              borderRadius: 8, border: '1px solid var(--border)',
+              display: 'flex', flexDirection: 'column', gap: 8, maxWidth: 420,
+            }}>
+              <input
+                type="text"
+                placeholder="Name / Label"
+                value={labelForm.label}
+                onChange={e => setLabelForm(f => ({ ...f, label: e.target.value }))}
+                style={{ background: 'var(--bg)', border: '1px solid var(--border2)', borderRadius: 5, padding: '5px 8px', color: 'var(--text)', fontSize: 13 }}
+              />
+              <select
+                value={labelForm.category}
+                onChange={e => setLabelForm(f => ({ ...f, category: e.target.value }))}
+                style={{ background: 'var(--bg)', border: '1px solid var(--border2)', borderRadius: 5, padding: '5px 8px', color: 'var(--text)', fontSize: 13 }}
+              >
+                <option value="">No Category</option>
+                <option value="suspect">Suspect</option>
+                <option value="trusted">Trusted</option>
+                <option value="vip">VIP</option>
+                <option value="blocked">Blocked</option>
+                <option value="investigating">Investigating</option>
+              </select>
+              <textarea
+                placeholder="Notes..."
+                value={labelForm.notes}
+                onChange={e => setLabelForm(f => ({ ...f, notes: e.target.value }))}
+                style={{ background: 'var(--bg)', border: '1px solid var(--border2)', borderRadius: 5, padding: '5px 8px', color: 'var(--text)', fontSize: 13, minHeight: 60, resize: 'vertical' }}
+              />
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button className="btn btn-primary" style={{ fontSize: 12, padding: '5px 12px' }} onClick={handleSaveLabel}>Save</button>
+                {label && (
+                  <button className="btn btn-ghost" style={{ fontSize: 12, padding: '5px 12px', color: '#ef4444' }} onClick={handleDeleteLabel}>Remove</button>
+                )}
+                <button className="btn btn-ghost" style={{ fontSize: 12, padding: '5px 12px' }} onClick={() => setEditingLabel(false)}>Cancel</button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

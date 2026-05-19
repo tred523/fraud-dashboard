@@ -24,6 +24,7 @@ app.use('/api/verdict', require('./routes/verdict'));
 app.use('/api/accounts', require('./routes/accounts'));
 app.use('/api/auth',    require('./routes/auth'));
 app.use('/api/admin',   require('./routes/admin'));
+app.use('/api/labels',  require('./routes/labels'));
 
 if (process.env.NODE_ENV === 'production') {
   const dist = path.join(__dirname, '../client/dist');

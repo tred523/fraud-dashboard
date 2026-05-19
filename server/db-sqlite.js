@@ -159,6 +159,18 @@ function initDb() {
     )
   `);
 
+  raw.exec(`
+    CREATE TABLE IF NOT EXISTS visitor_labels (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      visitor_id TEXT NOT NULL UNIQUE,
+      label TEXT,
+      category TEXT,
+      notes TEXT,
+      created_at INTEGER,
+      updated_at INTEGER
+    )
+  `);
+
   let demoKeyRow = raw.prepare("SELECT id FROM api_keys WHERE key = 'demo_key_12345'").get();
   if (!demoKeyRow) {
     raw.prepare("INSERT INTO api_keys (key, client_name, client_email, created_at, is_active) VALUES ('demo_key_12345', 'Demo Client', null, ?, 1)").run(Date.now());

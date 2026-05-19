@@ -1,9 +1,17 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { fetchOverview, fetchEvents, fetchCountries, fetchVerdictBatch } from '../api';
+import { fetchOverview, fetchEvents, fetchCountries, fetchVerdictBatch, fetchLabelsBatch } from '../api';
 import RiskBadge from '../components/RiskBadge';
 import Flags from '../components/Flags';
 import VerdictBadge from '../components/VerdictBadge';
+
+const CATEGORY_COLORS = {
+  suspect:       '#ef4444',
+  trusted:       '#22c55e',
+  vip:           '#f59e0b',
+  blocked:       '#991b1b',
+  investigating: '#f97316',
+};
 
 function LiveDot({ lastWebhookAt }) {
   const isLive = lastWebhookAt && (Date.now() - lastWebhookAt < 5 * 60 * 1000);
@@ -34,6 +42,7 @@ export default function Overview() {
   const [filters, setFilters]     = useState({ risk_level: '', country: '', flag: '' });
   const [verdictFilter, setVerdictFilter] = useState('');
   const [verdicts, setVerdicts]   = useState({});
+  const [labels, setLabels]       = useState({});
   const [loading, setLoading]     = useState(true);
 
   useEffect(() => {
@@ -50,8 +59,10 @@ export default function Overview() {
         const uniqueIds = [...new Set(d.events.map(e => e.visitor_id))];
         if (uniqueIds.length > 0) {
           fetchVerdictBatch(uniqueIds).then(setVerdicts).catch(console.error);
+          fetchLabelsBatch(uniqueIds).then(setLabels).catch(console.error);
         } else {
           setVerdicts({});
+          setLabels({});
         }
       })
       .catch(console.error)
@@ -176,6 +187,7 @@ export default function Overview() {
                   <tr>
                     <th>Timestamp</th>
                     <th>Visitor ID</th>
+                    <th>Label</th>
                     <th>City</th>
                     <th>OS / Device</th>
                     <th>Risk Score</th>
@@ -191,6 +203,25 @@ export default function Overview() {
                         <span className="mono truncate" style={{ display: 'block', color: 'var(--blue)', maxWidth: 140 }} title={ev.visitor_id}>
                           {ev.visitor_id}
                         </span>
+                      </td>
+                      <td>
+                        {labels[ev.visitor_id] ? (
+                          <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                            {labels[ev.visitor_id].category && (
+                              <span style={{
+                                width: 7, height: 7, borderRadius: '50%', flexShrink: 0,
+                                background: CATEGORY_COLORS[labels[ev.visitor_id].category] || '#64748b',
+                              }} />
+                            )}
+                            <span style={{ fontSize: 12, color: 'var(--text1)', maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {labels[ev.visitor_id].label || ev.visitor_id.substring(0, 12) + '…'}
+                            </span>
+                          </span>
+                        ) : (
+                          <span className="mono" style={{ fontSize: 12, color: 'var(--text3)' }}>
+                            {ev.visitor_id.substring(0, 12)}…
+                          </span>
+                        )}
                       </td>
                       <td style={{ whiteSpace: 'nowrap' }}>
                         {ev.city_name || '—'}
