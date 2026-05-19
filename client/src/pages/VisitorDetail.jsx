@@ -18,13 +18,13 @@ const EVENT_ICONS = {
   settings_change: '⚙️',
 };
 
-function fmt(ts) {
+const fmt = (ts) => {
   if (!ts) return '—';
-  return new Date(ts).toLocaleString('en-GB', {
-    day: '2-digit', month: 'short',
-    hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
-  });
-}
+  const n = Number(ts);
+  if (isNaN(n)) return ts;
+  const d = new Date(n > 9999999999 ? n : n * 1000);
+  return isNaN(d.getTime()) ? String(ts) : d.toLocaleString('en-GB');
+};
 
 const CARD_BRAND_STYLES = {
   visa:       { bg: '#1A1F71', color: '#fff', label: 'VISA' },

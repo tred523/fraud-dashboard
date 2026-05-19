@@ -1,0 +1,12 @@
+Fix Invalid Date in the new History tab in VisitorDetail.jsx.
+
+Find all date/timestamp formatting in the History tab component and apply this fix everywhere:
+const fmt = (ts) => {
+  if (!ts) return '—';
+  const n = Number(ts);
+  if (isNaN(n)) return ts;
+  const d = new Date(n > 9999999999 ? n : n * 1000);
+  return isNaN(d.getTime()) ? String(ts) : d.toLocaleString('en-GB');
+};
+
+Apply this to ALL timestamp fields in VisitorDetail.jsx - in History tab, Overview tab, and Behavior tab.
